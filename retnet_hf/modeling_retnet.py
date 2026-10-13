@@ -488,6 +488,10 @@ class RetNetForCausalLM(PreTrainedModel):
         _fused = (os.environ.get("RETNET_FUSED_CE") == "1"
                   and labels is not None and wcodes is not None)
         logits = None
+        # `loss` 必须在所有分支之前初始化：不传 labels 时（普通推理、prefill、
+        # 以及 HF 的 generate 路径）上面几个分支都不会赋值，line 536 的
+        # CausalLMOutput(loss=loss, ...) 会直接 UnboundLocalError。
+        loss = None
         if _fused:
             # 融合路径：LM head 的输入直接进 fused CE，完全不物化 [B,L,V]
             hidden, new_states = self._forward_hidden(
