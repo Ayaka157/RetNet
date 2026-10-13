@@ -14,11 +14,17 @@ training legs, 1,656,209,408 tokens in total.
 
 | | |
 | --- | --- |
-| Weights | Hugging Face — see the [model card](https://huggingface.co/Ayaka157/RetNet-0.5B) |
+| Weights (final) | [`Ayaka157/RetNet-0.5B`](https://huggingface.co/Ayaka157/RetNet-0.5B) — epoch 3, val loss 1.9459 |
+| Weights (earlier legs) | [`RetNet-0.5B-ep1`](https://huggingface.co/Ayaka157/RetNet-0.5B-ep1) · [`RetNet-0.5B-ep2`](https://huggingface.co/Ayaka157/RetNet-0.5B-ep2) |
+| Weights (first chat model) | [`Ayaka157/RetNet-100M`](https://huggingface.co/Ayaka157/RetNet-100M) — 100,370,064 parameters, 2026-08-20 |
 | Technical report | [`docs/26_RetNet-0.5B_技术报告.md`](docs/26_RetNet-0.5B_技术报告.md) (Chinese) · [zh PDF](docs/latex/zh/RetNet-0.5B-技术报告.pdf) · [en PDF](docs/latex/en/RetNet-0.5B-Technical-Report.pdf) |
 | Engineering log | [`docs/INDEX.md`](docs/INDEX.md) — 26 notes in Chinese, written while the work ran |
 | Operations | [`RUNBOOK.md`](RUNBOOK.md) |
 | Earlier Chinese README | [`README.zh-CN.md`](README.zh-CN.md), frozen at the 272M stage |
+
+The model repos carry `model.safetensors`, `config.json` with an `auto_map`, the modelling code the
+config points at, a `PreTrainedTokenizerFast`, and an English model card. Loading needs
+`trust_remote_code=True`.
 
 Weights, tokenized corpora and run logs are not in this repository. They total about 120 GB and
 live on disk and on Hugging Face.

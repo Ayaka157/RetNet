@@ -1041,8 +1041,8 @@ passed back from the front end as token ids rather than text}, because \code{<},
 
 The deployment is ``loopback backend plus an outbound tunnel'': the backend listens only on
 \code{127.0.0.1:8077}, and an outbound connector maps the public domain to that port, so no
-inbound port, no public IP and no port forwarding are needed (\code{serve/DEPLOY.md:98-109}). The
-public entry point is \href{https://your-demo-host.example/play/}{your-demo-host.example/play/}. On the
+inbound port, no public IP and no port forwarding are needed (\code{serve/DEPLOY.md:98-109}). This
+report does not publish the address of that endpoint; only its shape is described. On the
 operations side, \code{logs/play\_state.json} records each process's pid, a watchdog polls every
 3 seconds and, on seeing the backend or the connector misbehave, shuts both down together, only
 stopping processes whose command line it can recognise as its own. Health check record:
@@ -1051,6 +1051,13 @@ stopping processes whose command line it can recognise as its own. Health check 
 
 This section records no credential-like information --- not the domain's registrar, not the
 tunnel's identifiers or tokens --- only the architecture.
+
+Weights and model card are on Hugging Face at
+\href{https://huggingface.co/Ayaka157/RetNet-0.5B}{huggingface.co/Ayaka157/RetNet-0.5B}, together
+with the two intermediate checkpoints (ep1, ep2) and the 100M predecessor. \code{RetNetForCausalLM}
+is a custom architecture and needs \code{trust\_remote\_code=True}; the platform's hosted inference
+widget is \textbf{not guaranteed to work} with custom code, so run the loading and generation
+example from the model card instead.
 
 \section{Conclusion, Limitations, and Future Directions}
 

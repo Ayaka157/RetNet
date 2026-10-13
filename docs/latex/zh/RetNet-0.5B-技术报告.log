@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex 2026.5.14)  13 OCT 2026 23:18
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex 2026.5.14)  13 OCT 2026 23:43
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1332,29 +1332,29 @@ Overfull \hbox (4.06502pt too wide) in paragraph at lines 799--808
 [22]
 Missing character: There is no ≤ in font [lmmono10-regular]:!
 [23]
-Overfull \hbox (4.06502pt too wide) in paragraph at lines 858--874
+Overfull \hbox (4.06502pt too wide) in paragraph at lines 860--876
  [] 
  []
 
 Missing character: There is no ③ in font [lmroman10-regular]:mapping=tex-text;!
 [24]
-Overfull \hbox (4.16501pt too wide) in paragraph at lines 892--915
+Overfull \hbox (4.16501pt too wide) in paragraph at lines 894--917
  [] 
  []
 
 
 LaTeX Font Warning: Font shape `TU/FangSong(0)/m/it' undefined
-(Font)              using `TU/FangSong(0)/m/n' instead on input line 922.
+(Font)              using `TU/FangSong(0)/m/n' instead on input line 924.
 
 [25
 
 ]
-Overfull \hbox (4.065pt too wide) in alignment at lines 970--974
+Overfull \hbox (4.065pt too wide) in alignment at lines 972--976
  [] [] [] 
  []
 
 
-Overfull \hbox (4.065pt too wide) in alignment at lines 974--976
+Overfull \hbox (4.065pt too wide) in alignment at lines 976--978
  [] [] [] 
  []
 
@@ -1362,7 +1362,7 @@ Missing character: There is no ③ in font [lmroman10-regular]:mapping=tex-text;
 Missing character: There is no ① in font [lmroman10-regular]:mapping=tex-text;!
 Missing character: There is no ⇒ in font [lmroman10-regular]:mapping=tex-text;!
 
-Overfull \hbox (4.065pt too wide) in alignment at lines 976--1009
+Overfull \hbox (4.065pt too wide) in alignment at lines 978--1011
  [] [] [] 
  []
 
