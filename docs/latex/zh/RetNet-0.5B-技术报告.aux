@@ -1,0 +1,56 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\HyPL@Entry{0<</S/D>>}
+\@writefile{toc}{\contentsline {section}{摘要}{2}{Doc-Start}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}引言}{4}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}架构}{4}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}保留机制}{4}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}逐头可学习衰减门}{4}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}三种计算范式与分块闭式解}{5}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}宽度生长的函数保持层归一化——以及它在本模型里没有生效}{6}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}0.5B 配置}{7}{subsection.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}训练基础设施}{7}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}训练栈}{7}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}显存与批量的可行边界}{8}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}一步的时间构成}{8}{subsection.3.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces 一个 575\,ms 优化步的时间构成（RTX PRO 6000、batch 16、seq 2048、chunk 128、bf16）：GEMM 与逐元素/归约核按核名从一次真实剖分分桶实测；步时里可确定回收的还有 22--24\,ms。数据源 \texttt  {\small  docs/25} 与实测剖面。}}{9}{figure.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:fig-0p5b-step}{{1}{9}{一个 575\,ms 优化步的时间构成（RTX PRO 6000、batch 16、seq 2048、chunk 128、bf16）：GEMM 与逐元素/归约核按核名从一次真实剖分分桶实测；步时里可确定回收的还有 22--24\,ms。数据源 \code {docs/25} 与实测剖面。}{figure.caption.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}不报错的缺陷：按后果分四类}{10}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}阴性结果}{11}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}训练}{13}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}数据构成}{13}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}三段训练设置}{14}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}损失轨迹}{15}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}热重启的代价}{16}{subsection.4.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces 三段训练的验证 loss：每段都重启一条完整 cosine，热重启后首个评测点高于上一段最优，差值见图中标注。数据源为三段 \texttt  {\small  trainer\_state.json}。}}{16}{figure.caption.2}\protected@file@percent }
+\newlabel{fig:fig-0p5b-loss}{{2}{16}{三段训练的验证 loss：每段都重启一条完整 cosine，热重启后首个评测点高于上一段最优，差值见图中标注。数据源为三段 \code {trainer\_state.json}。}{figure.caption.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces 三段的学习率轨迹：每段都重启一条完整 cosine（峰值 $1.1\times 10^{-4}$、warm-up 500 步、衰减到 \texttt  {\small  min\_lr} $1.1\times 10^{-5}$），段间不接续。数据源同上一张图。}}{17}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:fig-0p5b-lr}{{3}{17}{三段的学习率轨迹：每段都重启一条完整 cosine（峰值 $1.1\times 10^{-4}$、warm-up 500 步、衰减到 \code {min\_lr} $1.1\times 10^{-5}$），段间不接续。数据源同上一张图。}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}算力、显存与成本}{17}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}token/参数 预算与它解释了什么}{18}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}评测}{19}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}基准设计}{19}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}结果}{20}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}难度分层}{21}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}停止行为与泄漏}{21}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}诚实结论}{21}{subsection.5.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}定性观察}{22}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}推理与服务}{22}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}训练用分块、预填用并行、解码用循环}{22}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}解码吞吐}{22}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}服务实现要点}{23}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}部署形态}{23}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}结论、限制与未来方向}{23}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}结论}{23}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}限制}{24}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}未来方向}{24}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A.}附录 A　完整超参与任务配置}{25}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B.}附录 B　复现命令}{25}{section.2}\protected@file@percent }
+\gdef \LT@i {\LT@entry 
+    {1}{155.0pt}\LT@entry 
+    {1}{155.0pt}\LT@entry 
+    {1}{155.0pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {C.}附录 C　缺陷与阴性结果的文件级证据索引}{26}{section.3}\protected@file@percent }
+\gdef \@abspage@last{28}

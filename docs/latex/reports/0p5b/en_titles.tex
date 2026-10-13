@@ -1,0 +1,99 @@
+%=======================================================================
+% English edition title block and abstract -- RetNet-0.5B Technical Report
+% Inserted before the body; the body comes from en_supplement.tex
+% The title must match the H1 of docs/26_RetNet-0.5B_技术报告.md, and the
+% abstract is a full translation of that file's `## 摘要`.
+%=======================================================================
+\thispagestyle{empty}
+
+\begin{center}
+\vspace*{2.6cm}
+
+{\LARGE\bfseries RetNet-0.5B: Training a 504M-Parameter\\[0.25em] Retentive Network to Production}
+
+\vspace{0.45cm}
+
+{\large\bfseries and Why Width Growth Never Unlocked}
+
+\vspace{0.7cm}
+
+{\normalsize RetNet Project}
+
+\vspace{0.25cm}
+
+{\small\itshape 2026-10-13}
+
+\vspace{1.5cm}
+
+{% the caption of Table 1 belongs to the cover block of the source report
+\small\textbf{Table 1.} Model summary (provenance per section of the body)}
+
+\vspace{0.5em}
+
+\begin{minipage}{0.94\textwidth}
+\centering\small
+\begin{tabular}{@{}rl@{}}
+\toprule
+Model & 504.18M parameters (504{,}179{,}896), 20 layers, width 1408, 22 heads \\
+Training & three legs of one epoch; 1{,}656{,}209{,}408 tokens actually consumed \\
+Hardware & RTX 3090 24\,GB / RTX PRO 6000 96\,GB / RTX 3070 8\,GB \\
+Data & \code{chat\_pack\_v13}, 552{,}330{,}489 token slots, 2048-token context \\
+Result & validation loss 2.6358 $\rightarrow$ 1.9459; 78 of the 82 growth affine tensors are bitwise zero \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+
+\vfill
+
+{\small\itshape This is the English edition; the Chinese edition is typeset as a
+separate document from the same Markdown source.}
+
+\vspace{1.0cm}
+\end{center}
+
+\clearpage
+
+%-----------------------------------------------------------------------
+% Abstract
+%-----------------------------------------------------------------------
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+RetNet's linear recurrence makes the memory cost of long-sequence inference independent of
+sequence length, but it also means that a model of the half-billion-parameter class can only be
+pushed forward by one card's memory and one card's time budget; every design choice in this
+project is governed by those two constraints. This report records the complete engineering facts
+of one specific model, \code{checkpoints/retnet\_500m\_v15b\_ep3}, from initialisation to online
+service: \textbf{504{,}179{,}896} parameters, 20 layers, \code{d\_model} 1408, 22 heads, trained
+on the \textbf{552{,}330{,}489} token slots of \code{data\_cache/chat\_pack\_v13} in \textbf{three
+legs} (ep1 on an RTX 3090 24\,GB, ep2/ep3 on an RTX PRO 6000 96\,GB, leg by leg, no multi-GPU
+parallelism), consuming \textbf{1{,}656{,}209{,}408} tokens in total (\textbf{3.28496} tokens per
+nominal parameter; the three token definitions and their differences are in \S4.1), with
+validation loss falling from \textbf{2.6358} to \textbf{1.9459}. The same weights switch between
+three mathematically equivalent computation forms --- parallel, chunkwise and recurrent --- with
+chunkwise used for training, parallel for prefill and recurrent for per-token decoding.
+
+Three classes of engineering finding are worth recording separately. Of a 575\,ms step, 61.6\% is
+GEMM and 3.8--4.3\% is removable structural redundancy. \textbf{Four classes of defect that raise
+no error} (a checkpoint overriding the command-line batch size, the scheduler not resuming when
+\code{optimizer.pt} is missing, the dead \code{--eval\_batches} field being silently ignored, the
+throughput field using \code{max\_steps} as its numerator, and an equivalence test that used the
+function under test as its own reference) each have reproducible log evidence. And one structural
+measurement, re-checked by the project's verifier: of the 82 affine tensors added by growth,
+\textbf{78 are bitwise zero} (the 4 counterexamples sit in L18/L19), so \textbf{67.08\%} of the
+checkpoint's weight elements are exactly zero, with \code{gamma\_new = 0} self-locking as the
+mechanism (\S2.4). That count is verified, but \textbf{no backward pass was run, so ``non-zero''
+is not the same as ``trainable''}.
+
+Evaluation and serving results are in \S5 and \S6; the model is served at
+\href{https://your-demo-host.example/play/}{your-demo-host.example/play/}.
+
+\clearpage
+
+%-----------------------------------------------------------------------
+% Contents
+%-----------------------------------------------------------------------
+\renewcommand{\contentsname}{Contents}
+\tableofcontents
+
+\clearpage

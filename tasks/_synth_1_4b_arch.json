@@ -1,0 +1,29 @@
+{
+  "_comment": [
+    "只为测速用的假 1.37B 架构（不参与任何训练）。",
+    "用途：验证一个设计层判断 —— 「这个 workload 在 Blackwell 上 MFU 只有 46%，",
+    "是因为模型对这张卡来说太小」，还是硬件/框架本身只能这样。",
+    "做法：保持 head_dim=64、chunk=128、seq=2048 不变，只把 d_model / layers / ffn 放大，",
+    "再看 MFU 是升还是降。参数越多 → 每字节搬运对应的 FLOP 越多 → MFU 应更高。",
+    "估算参数：每层 Wq/Wk/Wg(2048²) + Wv(2048×4096) + Wo(4096×2048) + FFN(2048×4096×2) ≈ 46M",
+    "          × 28 层 ≈ 1.29B，加 embedding 2×20000×2048 = 82M → 约 1.37B"
+  ],
+  "d_model": 2048,
+  "num_heads": 32,
+  "num_layers": 28,
+  "value_dim": 4096,
+  "ffn_dim": 4096,
+  "vocab_size": 20000,
+  "chunk_size": 128,
+  "dropout": 0.0,
+  "norm_eps": 1e-05,
+  "tie_weights": true,
+  "use_gla": true,
+  "use_swiglu": false,
+  "use_growth_ln": false,
+  "embed_scale": null,
+  "prompt_loss_weight": 0.1,
+  "mode": "chunkwise",
+  "checkpoint_layers": -1,
+  "dtype": "float32"
+}

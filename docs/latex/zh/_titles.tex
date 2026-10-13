@@ -1,0 +1,93 @@
+%=======================================================================
+% 中文版标题区与摘要 — 由 mktex.py 插入正文之前
+%=======================================================================
+\thispagestyle{empty}
+
+\begin{center}
+\vspace*{3.2cm}
+
+{\LARGE\bfseries RetNet-272M 训练技术报告}
+
+\vspace{0.55cm}
+
+{\large A Technical Report on Training RetNet-272M}
+
+\vspace{1.1cm}
+
+{\normalsize RetNet 项目组}
+
+\vspace{0.25cm}
+
+{\small\itshape 2026-10-11}
+
+\vspace{2.2cm}
+
+\begin{minipage}{0.80\textwidth}
+\centering\small
+\begin{tabular}{@{}rl@{}}
+\toprule
+模型 & 272.30\,M 参数，20 层，上下文 2048 token \\
+优化步时 & 2176\,ms $\rightarrow$ 662\,ms（$3.29\times$） \\
+硬件 & RTX 4070 Laptop 8\,GB / RTX 3070 8\,GB \\
+数据 & 552.3\,M token packed 监督微调语料 \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+
+\vfill
+
+{\small\itshape 本 PDF 为中文版；英文版为另一文件 RetNet-272M-Technical-Report.pdf。}
+
+\vspace{1.2cm}
+\end{center}
+
+\clearpage
+
+%-----------------------------------------------------------------------
+% 摘要
+%-----------------------------------------------------------------------
+\section*{摘要}
+\addcontentsline{toc}{section}{摘要}
+
+本报告记述 \textbf{RetNet-272M} 的训练工作：一个 272.30M 参数、带门控线性注意力的保留网络
+（retentive network）语言模型，在单张 8\,GB 消费级显卡上、以 2048 token 上下文对
+552.3M token 的 packed 监督微调语料进行训练。报告涵盖：
+
+\begin{enumerate}[label=（\chinese{enumi}）]
+\item 模型架构：多尺度保留、可学习的逐头衰减门控、函数保持的宽度增长层归一化；
+\item 数据管线及其实测构成：每行平均装 7.8 个样本、padding 占 2.92\%、
+      5.60\% 的样本带思维链；
+\item 一组把\textbf{优化步时从 2176\,ms 降到 662\,ms（$3.29\times$）}的工程优化，
+      附带内核级归因，说明残余步时按 66.4\% GEMM / 33.6\% 逐元素切分，
+      且 GEMM 那一半已经跑在这批形状的硬件上限之上；
+\item 用闭式解替代 chunkwise 状态扫描，把它从每层 1127\,µs 降到 190\,µs，
+      而相对参考递推的误差仍在 $10^{-6}$ 量级；
+\item 我们查出并修复的\textbf{三个静默正确性缺陷}——\code{torch.compile} 的
+      state-dict 前缀导致所有保存的检查点不可加载、从未真正工作的续训路径、
+      以及一个「自己跟自己比」的等价性测试。
+\end{enumerate}
+
+同时报告负结果：融合线性交叉熵（$-13\%$ 吞吐）、GroupNorm 布局改写（$-9.2\%$）、
+\code{max-autotune} 编译（0\%）、物理 batch 2（显存不可行）。最后给出一条
+\textbf{诚实的负面结论}：在把基准的「预算截断」混杂因素校正之后，续训
+10{,}000 步的 v14 在\textbf{同一批 242 道题}上正确率比 v13 低 \textbf{28\%}
+（0.194 $\rightarrow$ 0.141，约 $1.6\sigma$），而它的「停下来」行为反而变好了
+（截断率 72.5\% $\rightarrow$ 65.2\%，裸泄漏 52.0\% $\rightarrow$ 46.8\%）。
+我们提出但\textbf{未验证}的首要假说是：在已经退火到 \code{min\_lr} 的权重上
+重启一条完整的 cosine（峰值 LR 跳升 $3.6\times$）造成了灾难性遗忘——
+signature 是「训练 loss 下降、任务正确率下降」。
+
+\bigskip
+
+{\small\textbf{关键词：}保留网络（RetNet）；门控线性注意力（GLA）；chunkwise 并行；
+闭式状态扫描；\code{torch.compile}；8-bit AdamW；单卡 8\,GB 训练；静默正确性缺陷。}
+
+\clearpage
+
+%-----------------------------------------------------------------------
+% 目录
+%-----------------------------------------------------------------------
+\renewcommand{\contentsname}{目录}
+\tableofcontents
+
+\clearpage

@@ -1,0 +1,33 @@
+%=======================================================================
+% English edition preamble — RetNet-272M Technical Report
+% Build: xelatex twice
+%=======================================================================
+\documentclass[11pt,openany]{article}
+
+% Latin text fonts
+\usepackage{fontspec}
+\setmainfont{Times New Roman}[Ligatures=TeX]
+\setsansfont{Microsoft YaHei}
+\setmonofont{Consolas}[Scale=0.86]
+
+% CJK fallback for the few Chinese strings that remain (code comments,
+% file names, quoted configuration keys).
+\usepackage{xeCJK}
+\setCJKmainfont{SimSun}[BoldFont=SimHei,ItalicFont=KaiTi]
+\setCJKmonofont{FangSong}
+\xeCJKsetup{CJKmath=false}
+
+\input{../preamble-common.tex}
+
+\hypersetup{
+  pdftitle  = {RetNet-272M Technical Report},
+  pdfauthor = {RetNet Project},
+  pdfsubject= {Retentive Networks / Gated Linear Attention / Training Engineering},
+  pdfkeywords={RetNet, GLA, chunkwise, torch.compile, mixed precision, single-GPU training},
+}
+
+\fancyhead[L]{\small\itshape RetNet-272M Technical Report}
+\fancyhead[R]{\small\thepage}
+\fancyfoot[C]{}
+
+\begin{document}

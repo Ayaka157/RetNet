@@ -1,0 +1,40 @@
+\contentsline {section}{摘要}{2}{Doc-Start}%
+\contentsline {section}{\numberline {1}引言}{4}{section.1}%
+\contentsline {section}{\numberline {2}架构}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}保留机制}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}逐头可学习衰减门}{4}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}三种计算范式与分块闭式解}{5}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}宽度生长的函数保持层归一化——以及它在本模型里没有生效}{6}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}0.5B 配置}{7}{subsection.2.5}%
+\contentsline {section}{\numberline {3}训练基础设施}{7}{section.3}%
+\contentsline {subsection}{\numberline {3.1}训练栈}{7}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}显存与批量的可行边界}{8}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}一步的时间构成}{8}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}不报错的缺陷：按后果分四类}{10}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}阴性结果}{11}{subsection.3.5}%
+\contentsline {section}{\numberline {4}训练}{13}{section.4}%
+\contentsline {subsection}{\numberline {4.1}数据构成}{13}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}三段训练设置}{14}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}损失轨迹}{15}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}热重启的代价}{16}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}算力、显存与成本}{17}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}token/参数 预算与它解释了什么}{18}{subsection.4.6}%
+\contentsline {section}{\numberline {5}评测}{19}{section.5}%
+\contentsline {subsection}{\numberline {5.1}基准设计}{19}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}结果}{20}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}难度分层}{21}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}停止行为与泄漏}{21}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}诚实结论}{21}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}定性观察}{22}{subsection.5.6}%
+\contentsline {section}{\numberline {6}推理与服务}{22}{section.6}%
+\contentsline {subsection}{\numberline {6.1}训练用分块、预填用并行、解码用循环}{22}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}解码吞吐}{22}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}服务实现要点}{23}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}部署形态}{23}{subsection.6.4}%
+\contentsline {section}{\numberline {7}结论、限制与未来方向}{23}{section.7}%
+\contentsline {subsection}{\numberline {7.1}结论}{23}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}限制}{24}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}未来方向}{24}{subsection.7.3}%
+\contentsline {section}{\numberline {A.}附录 A　完整超参与任务配置}{25}{section.1}%
+\contentsline {section}{\numberline {B.}附录 B　复现命令}{25}{section.2}%
+\contentsline {section}{\numberline {C.}附录 C　缺陷与阴性结果的文件级证据索引}{26}{section.3}%

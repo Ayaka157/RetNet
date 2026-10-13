@@ -1,0 +1,101 @@
+%=======================================================================
+% English edition title block and abstract -- inserted before the body
+%=======================================================================
+\thispagestyle{empty}
+
+\begin{center}
+\vspace*{3.2cm}
+
+{\LARGE\bfseries A Technical Report on\\[0.25em] Training RetNet-272M}
+
+\vspace{0.55cm}
+
+{\large RetNet-272M Training Technical Report}
+
+\vspace{1.1cm}
+
+{\normalsize RetNet Project}
+
+\vspace{0.25cm}
+
+{\small\itshape 2026-10-11}
+
+\vspace{2.2cm}
+
+\begin{minipage}{0.80\textwidth}
+\centering\small
+\begin{tabular}{@{}rl@{}}
+\toprule
+Model & 272.30M parameters, 20 layers, 2048-token context \\
+Step time & 2176\,ms $\rightarrow$ 662\,ms ($3.29\times$) \\
+Hardware & RTX 4070 Laptop 8\,GB / RTX 3070 8\,GB \\
+Data & 552.3\,M-token packed supervised-fine-tuning corpus \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+
+\vfill
+
+{\small\itshape This is the English edition; the Chinese edition is a separate file,
+RetNet-272M-Chinese-Report.pdf.}
+
+\vspace{1.2cm}
+\end{center}
+
+\clearpage
+
+%-----------------------------------------------------------------------
+% Abstract
+%-----------------------------------------------------------------------
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+We present a technical report on the training of \textbf{RetNet-272M}, a 272.30M-parameter
+retentive language model with gated linear attention, trained on a 552.3M-token packed
+supervised-fine-tuning corpus at a 2048-token context length on a single 8\,GB consumer
+GPU. The report covers:
+
+\begin{enumerate}
+\item the architecture, including the multi-scale retention, the learnable per-head decay
+      gate, and a function-preserving width-growth layer norm;
+\item the data pipeline and its measured composition (7.8 samples per packed row, 2.92\%
+      padding, 5.60\% of samples carrying chain-of-thought);
+\item a set of \textbf{engineering optimizations that reduce the per-optimization-step time
+      from 2176\,ms to 662\,ms ($3.29\times$)} under the real \code{Trainer} path, together
+      with kernel-level attribution showing that the residual step splits 66.4\% GEMM /
+      33.6\% elementwise and that the GEMM half already runs at or above its
+      shape-limited ceiling;
+\item a closed-form replacement for the chunkwise state scan that cuts it from 1127\,µs to
+      190\,µs per layer while remaining within $10^{-6}$ relative error of the reference
+      recurrence; and
+\item three \textbf{silent correctness defects} we found and fixed --- a \code{torch.compile}
+      state-dict prefix that made every saved checkpoint unloadable, a resume path that had
+      never worked, and an equivalence test that compared a function against itself.
+\end{enumerate}
+
+We also report negative results: fused linear cross-entropy ($-13\%$ throughput), a
+group-norm layout rewrite ($-9.2\%$), \code{max-autotune} compilation (0\%), and physical
+batch size 2 (memory-infeasible). Finally, one honest negative result: after controlling for
+the benchmark's budget-truncation confound, the 10,000-step continuation scores \textbf{28\%
+lower than its own starting point} on the same 242 never-truncated items (0.194 $\rightarrow$
+0.141, $\approx 1.6\sigma$), while its stopping behaviour \emph{improved} (truncation
+72.5\% $\rightarrow$ 65.2\%, raw think-leak 52.0\% $\rightarrow$ 46.8\%). Our leading ---
+\textbf{unverified} --- hypothesis is catastrophic forgetting from restarting a full cosine
+schedule on weights already annealed to \code{min\_lr} (peak LR jumps $3.6\times$): the
+signature is falling training loss with falling task accuracy.
+
+\bigskip
+
+{\small\textbf{Keywords:} retentive network (RetNet); gated linear attention (GLA); chunkwise
+parallelism; closed-form state scan; \code{torch.compile}; 8-bit AdamW; single 8\,GB GPU
+training; silent correctness defects.}
+
+\clearpage
+
+%-----------------------------------------------------------------------
+% Contents
+%-----------------------------------------------------------------------
+\renewcommand{\contentsname}{Contents}
+\tableofcontents
+
+\clearpage

@@ -1,0 +1,52 @@
+\contentsline {section}{Abstract}{2}{Doc-Start}%
+\contentsline {section}{\numberline {1}Introduction}{5}{section.1}%
+\contentsline {section}{\numberline {2}Background}{5}{section.2}%
+\contentsline {section}{\numberline {3}Architecture}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Configuration}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Multi-Scale Retention}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}The Log-Space Decay Mask: A Real Numerical Trap}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Chunked Recurrence and the Closed-Form Scan}{7}{subsection.3.4}%
+\contentsline {subsubsection}{\numberline {3.4.1}Reference Chunkwise Form}{7}{subsubsection.3.4.1}%
+\contentsline {subsubsection}{\numberline {3.4.2}The Key Observation}{7}{subsubsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.5}An Equivalent Form of GroupNorm}{8}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}Function-Preserving Width Growth (GrowthLayerNorm)}{8}{subsection.3.6}%
+\contentsline {subsection}{\numberline {3.7}Loss}{9}{subsection.3.7}%
+\contentsline {section}{\numberline {4}Data}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Measured Composition}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Conversation Encoding}{9}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Side Effects of Packing}{10}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Training Pipeline}{10}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Configuration}{10}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Training Legs}{10}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}A Silent Correctness Bug We Stepped On: HF's Loss Normalisation}{12}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Engineering Optimizations}{12}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Measurement Methodology}{12}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Results}{13}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Kernel-Level Attribution}{13}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Launch-Count Optimization of the Decay Tables}{14}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Fixing Two Silent \texttt {\small torch.compile} Failures}{14}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}Three Dead Config Fields}{15}{subsection.6.6}%
+\contentsline {subsection}{\numberline {6.7}How Far GEMM Is from the Hardware Ceiling}{16}{subsection.6.7}%
+\contentsline {subsection}{\numberline {6.8}Negative Results}{17}{subsection.6.8}%
+\contentsline {section}{\numberline {7}Correctness Defects}{18}{section.7}%
+\contentsline {subsection}{\numberline {7.1}The \texttt {\small \_orig\_mod.} Prefix: No Checkpoint Would Load}{18}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}The Resume Path Never Worked}{19}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}An Equivalence Test That Compared a Function With Itself}{19}{subsection.7.3}%
+\contentsline {section}{\numberline {8}Evaluation}{20}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Benchmark Composition}{20}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}A Metric Defect That Had To Be Written Down}{21}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}The Completed Comparison}{22}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}A Causal Hypothesis Awaiting Test: Restarting the LR After Annealing}{23}{subsection.8.4}%
+\contentsline {section}{\numberline {9}Limitations and Future Work}{23}{section.9}%
+\contentsline {section}{\numberline {10}Conclusion}{23}{section.10}%
+\contentsline {section}{\numberline {A.}Appendix A: Reproduction}{25}{section.1}%
+\contentsline {section}{\numberline {B.}Appendix B: Key Code}{25}{section.2}%
+\contentsline {subsection}{\numberline {B.1}Closed-Form State Scan (\texttt {\small retnet\_hf/retention\_fast.py})}{25}{subsection.2.1}%
+\contentsline {subsection}{\numberline {B.2}Log-Space Decay Mask (\texttt {\small retnet\_hf/retention\_fast.py})}{26}{subsection.2.2}%
+\contentsline {subsection}{\numberline {B.3}In-Place Compilation (\texttt {\small retnet\_hf/train.py})}{26}{subsection.2.3}%
+\contentsline {subsection}{\numberline {B.4}Export Self-Check (\texttt {\small retnet\_hf/train.py})}{26}{subsection.2.4}%
+\contentsline {subsection}{\numberline {B.5}Resume Path (\texttt {\small retnet\_hf/train.py})}{26}{subsection.2.5}%
+\contentsline {section}{\numberline {C.}Appendix C: External Flag Control (\texttt {\small retnet\_hf/control.py})}{27}{section.3}%
+\contentsline {section}{\numberline {D.}Appendix D: Defect Summary}{27}{section.4}%
+\contentsline {section}{\numberline {1.}References}{27}{backmatter.1}%
+\contentsline {section}{\numberline {2.}Reference Reliability Note}{29}{backmatter.2}%

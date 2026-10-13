@@ -1,0 +1,106 @@
+%=======================================================================
+% Pipeline self-test -- English body (not a real report)
+%
+% Every number below is copied from docs/_report_0p5b/facts.md, which was read
+% out of the real trainer_state.json files.
+%=======================================================================
+
+\section{Introduction}
+
+This supplement is the whole English body of the self-test document. It exists to prove that
+the English edition of a Chinese-only report can be built from a hand-written supplement, with
+the same structure as the Chinese edition: the same sections in the same order, the same
+tables, and the same figure.
+
+The 0.5B model has 504{,}179{,}896 parameters (504.18M) in 20 layers of width 1408 with 22
+heads, and was trained for three legs over the same 552.33M-token packed corpus, one epoch per
+leg. The pipeline under test must render all of that without inventing anything.
+
+\subsection{Configuration}
+
+\begin{center}\small
+\begin{tabular}{@{}>{\RaggedRight\arraybackslash}p{0.34\textwidth}>{\RaggedRight\arraybackslash}p{0.58\textwidth}@{}}
+\toprule
+\textbf{Item} & \textbf{Value} \\
+\midrule
+Parameters & \textbf{504{,}179{,}896} (504.18M) \\
+Layers / width / heads & 20 / 1408 / 22 \\
+Feed-forward and value width & 2816 / 2816 \\
+Vocabulary & 20{,}000 (tied embeddings) \\
+Retention mode & \code{chunkwise}, \code{chunk\_size} 128 \\
+Learned per-head decay gate & enabled (\code{use\_gla}) \\
+Growth layer norm & enabled, \code{growth\_old\_dim} 768 \\
+Storage precision & \code{float32} in \code{config.json}; trained in bf16 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Training}
+
+The three legs share one corpus and one schedule shape: every leg restarts a full cosine with a
+peak of $1.1\times10^{-4}$ and 500 warm-up steps, rather than continuing from the previous leg's
+learning-rate tail.
+
+\subsection{Training Legs}
+
+\begin{center}\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+\textbf{Leg} & \textbf{Hardware} & \textbf{Steps} & \textbf{Tokens per step} & \textbf{Total tokens} \\
+\midrule
+ep1 & RTX 3090 24\,GB & 67{,}390 & 8{,}192 & 552{,}058{,}880 \\
+ep2 & RTX PRO 6000 & 16{,}848 & 32{,}768 & 552{,}140{,}800 \\
+ep3 & RTX PRO 6000 & 16{,}848 & 32{,}768 & 552{,}140{,}800 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Cumulatively the three legs consumed 1{,}656{,}340{,}480 tokens, or 3.285 tokens per parameter.
+
+\subsection{Validation Loss}
+
+\begin{center}\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Leg} & \textbf{First eval} & \textbf{Best eval} & \textbf{Best step} \\
+\midrule
+ep1 & 2.6358 & \textbf{2.1035} & 65{,}000 \\
+ep2 & 2.1800 & \textbf{1.9865} & 16{,}848 \\
+ep3 & 2.1174 & \textbf{1.9459} & 16{,}848 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{The Cost of the Hot Restarts}
+
+\begin{center}\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Hand-off} & \textbf{Previous best} & \textbf{Next first eval} & \textbf{Difference} \\
+\midrule
+ep1 $\rightarrow$ ep2 & 2.1035 @65{,}000 & 2.1800 @2{,}106 & $+0.0764$ \\
+ep2 $\rightarrow$ ep3 & 1.9865 @16{,}848 & 2.1174 @2{,}106 & $+0.1310$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Both hand-offs made the model \emph{worse} before it recovered: the first evaluation of a new
+leg sits above the previous leg's best, by 0.0764 and 0.1310 respectively, and both legs do
+eventually finish below that starting point.
+
+\section{Appendix A: Reproduction}
+
+\begin{lstlisting}[language=Python]
+# 1) the figures, from the real state files
+python makefigs.py
+
+# 2) Markdown -> LaTeX, then two XeLaTeX passes per edition
+python mktex.py --report selftest
+\end{lstlisting}
+
+\backmattersection{References}
+
+\begin{itemize}
+  \item Retentive Network: A Successor to Transformer for Large Language Models. arXiv:2307.08621.
+  \item Gated Linear Attention Transformers with Hardware-Efficient Training. arXiv:2312.06635.
+\end{itemize}

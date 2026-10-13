@@ -1,0 +1,21 @@
+%=======================================================================
+% 中文版前言 — RetNet-272M 技术报告
+% 编译：xelatex 两遍（生成目录与交叉引用）
+%=======================================================================
+\documentclass[11pt,openany]{ctexart}
+
+\input{../preamble-common.tex}
+
+% 中文字体：正文宋体 / 强调黑体 / 引用楷体 / 等宽仿宋
+\setCJKmainfont{SimSun}[BoldFont=SimHei,ItalicFont=KaiTi]
+\setCJKsansfont{Microsoft YaHei}
+\setCJKmonofont{FangSong}
+
+\hypersetup{
+  pdftitle  = {RetNet-272M 训练技术报告},
+  pdfauthor = {RetNet 项目组},
+  pdfsubject= {保留网络 / 门控线性注意力 / 训练工程优化},
+  pdfkeywords={RetNet, GLA, chunkwise, torch.compile, 混合精度, 单卡训练},
+}
+
+\begin{document}

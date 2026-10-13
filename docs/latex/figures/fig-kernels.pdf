@@ -1,0 +1,48 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 430 150] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 954 >>
+stream
+0.60 w 0.130 0.130 0.150 RG 40.00 44.00 350.00 52.00 re S
+0.200 0.350 0.600 rg 40.00 44.00 232.40 52.00 re f
+BT 1.000 1.000 1.000 rg /F2 7.20 Tf 1 0 0 1 132.79 55.00 Tm (GEMM  66.4%) Tj ET
+0.800 0.520 0.200 rg 272.40 44.00 88.20 52.00 re f
+BT 1.000 1.000 1.000 rg /F2 7.20 Tf 1 0 0 1 271.68 55.00 Tm (Triton elementwise  25.2%) Tj ET
+0.240 0.500 0.350 rg 360.60 44.00 14.70 52.00 re f
+0.620 0.640 0.670 rg 375.30 44.00 14.70 52.00 re f
+0.240 0.500 0.350 rg 40.00 28.00 7.00 7.00 re f
+BT 0.130 0.130 0.150 rg /F1 7.00 Tf 1 0 0 1 50.00 28.60 Tm (Triton reduction  4.2%) Tj ET
+0.620 0.640 0.670 rg 134.47 28.00 7.00 7.00 re f
+BT 0.130 0.130 0.150 rg /F1 7.00 Tf 1 0 0 1 144.47 28.60 Tm (elementwise  4.2%) Tj ET
+BT 0.130 0.130 0.150 rg /F2 7.60 Tf 1 0 0 1 40.00 122.00 Tm (470 ms GPU busy over 3 micro-steps \(166 ms wall\)) Tj ET
+BT 0.420 0.420 0.460 rg /F1 7.00 Tf 1 0 0 1 40.00 110.00 Tm (94-95% occupancy; the GEMM half runs at its shape ceiling) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001255 00000 n 
+0000001352 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1454
+%%EOF

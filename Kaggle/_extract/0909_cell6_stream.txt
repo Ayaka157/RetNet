@@ -1,0 +1,71 @@
+Launching a training on TPU cores.
+[XLA] world_size=8 device=xla:0 model_mode=chunkwise batch/device=4
+
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+https://symbolize.stripped_domain/r/?trace=7c627aa360e7,7c627aa32def&map= 
+E0829 05:38:28.534899     169 process_state.cc:1175] RAW: Signal 15 raised at PC: 0x7c627aa360e7 while already in FailureSignalHandler!
+E0829 05:38:28.534931     169 process_state.cc:1210] RAW: Raising 15 signal with default behavior
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 171 (TID 171) on cpu 50 from PID 14; stack trace: ***
+*** SIGTERM received by PID 172 (TID 172) on cpu 8 from PID 14; stack trace: ***
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 176 (TID 176) on cpu 27 from PID 14; stack trace: ***
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 173 (TID 173) on cpu 32 from PID 14; stack trace: ***
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 170 (TID 170) on cpu 73 from PID 14; stack trace: ***
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 175 (TID 175) on cpu 67 from PID 14; stack trace: ***
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.666737     176 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+E0829 05:38:28.757433     176 process_state.cc:808] RAW: Raising signal 15 with default behavior
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.765245     171 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.765789     172 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.766082     170 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.766374     175 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.766889     173 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+E0829 05:38:28.838034     171 process_state.cc:808] RAW: Raising signal 15 with default behavior
+E0829 05:38:28.849019     175 process_state.cc:808] RAW: Raising signal 15 with default behavior
+E0829 05:38:28.854285     172 process_state.cc:808] RAW: Raising signal 15 with default behavior
+E0829 05:38:28.860066     170 process_state.cc:808] RAW: Raising signal 15 with default behavior
+E0829 05:38:28.882018     173 process_state.cc:808] RAW: Raising signal 15 with default behavior
+

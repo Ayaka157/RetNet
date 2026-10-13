@@ -1,0 +1,82 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\HyPL@Entry{0<</S/D>>}
+\@writefile{toc}{\contentsline {section}{Abstract}{2}{Doc-Start}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{5}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Architecture}{5}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Retention}{5}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}The Learned Per-Head Decay Gate}{5}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Three Computation Forms and the Closed-Form Chunkwise Scan}{6}{subsection.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Purpose and per-step cost of the three computation forms}}{7}{table.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Growth Layer Norm --- and Why It Did Not Activate in This Model}{7}{subsection.2.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Measured state of the growth layer norm's new dimensions}}{7}{table.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}0.5B Configuration}{8}{subsection.2.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Model configuration}}{8}{table.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}General Infrastructures}{9}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Training Stack}{9}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}The Feasible Envelope of Memory and Batch Size}{10}{subsection.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Feasible configurations and measured peaks on three devices}}{10}{table.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Composition of One Step}{10}{subsection.3.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Where one 575\,ms optimization step goes (RTX PRO 6000, batch 16, seq 2048, chunk 128, bf16). GEMM and the Triton kernels are bucketed by kernel name from a real profile; 22--24\,ms of the step is still recoverable.}}{11}{figure.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:fig-0p5b-step}{{1}{11}{Where one 575\,ms optimization step goes (RTX PRO 6000, batch 16, seq 2048, chunk 128, bf16). GEMM and the Triton kernels are bucketed by kernel name from a real profile; 22--24\,ms of the step is still recoverable}{figure.caption.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Composition of one optimization step}}{11}{table.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Recoverable step-time changes that were not landed}}{11}{table.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Defects That Raise No Error, in Four Classes by Consequence}{12}{subsection.3.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces The defects that raised no error, grouped by consequence}}{12}{table.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Negative Results}{13}{subsection.3.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Negative results}}{13}{table.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Pre-Training}{15}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Data Composition}{15}{subsection.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Measured composition of the packed corpus}}{15}{table.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Composition of the corpus, closed component by component}}{15}{table.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Settings of the Three Legs}{16}{subsection.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Settings of the three training legs}}{16}{table.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Loss Trajectory}{17}{subsection.4.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces ep1 validation loss, evaluation by evaluation}}{17}{table.12}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces ep2 validation loss, evaluation by evaluation}}{18}{table.13}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces ep3 validation loss, evaluation by evaluation}}{18}{table.14}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Validation loss of the three training legs. The thin line is every logged step, the thick line its 25-step rolling mean, and the dots are the evaluations; every leg restarts a full cosine. Source: the three \texttt  {\small  trainer\_state.json} files.}}{19}{figure.caption.2}\protected@file@percent }
+\newlabel{fig:fig-0p5b-loss}{{2}{19}{Validation loss of the three training legs. The thin line is every logged step, the thick line its 25-step rolling mean, and the dots are the evaluations; every leg restarts a full cosine. Source: the three \code {trainer\_state.json} files}{figure.caption.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Learning rate of the three legs: every leg restarts a full cosine (peak $1.1\times 10^{-4}$, 500 warm-up steps, decay to \texttt  {\small  min\_lr} $1.1\times 10^{-5}$) instead of continuing from the previous leg's tail. Same source as the loss figure.}}{19}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:fig-0p5b-lr}{{3}{19}{Learning rate of the three legs: every leg restarts a full cosine (peak $1.1\times 10^{-4}$, 500 warm-up steps, decay to \code {min\_lr} $1.1\times 10^{-5}$) instead of continuing from the previous leg's tail. Same source as the loss figure}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}The Cost of the Hot Restarts}{20}{subsection.4.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Cost of the hot restarts}}{20}{table.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Compute, Memory and Cost}{20}{subsection.4.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Measured runtime, throughput and cost per leg}}{20}{table.16}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Peak memory and power draw during training}}{21}{table.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Tokens per Parameter, and What the Budget Explains}{21}{subsection.4.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces Token/parameter budgets, wall clock and cost}}{21}{table.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Evaluation}{22}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Benchmark Design}{22}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Results}{22}{subsection.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces Benchmark result (full 1{,}020-item run)}}{22}{table.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Pass Rate by Difficulty}{23}{subsection.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces Pass rate by difficulty}}{23}{table.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Stopping Behaviour and Leakage}{23}{subsection.5.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {21}{\ignorespaces Stopping behaviour and leakage}}{23}{table.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Honest Conclusion}{23}{subsection.5.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Qualitative Observation}{24}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Inference and Serving}{24}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Training Uses Chunkwise, Prefill Parallel, Decoding Recurrent}{24}{subsection.6.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {22}{\ignorespaces One set of weights, three computation forms}}{24}{table.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Decode Throughput}{24}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Serving Implementation Notes}{25}{subsection.6.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {23}{\ignorespaces Server options and their defaults}}{25}{table.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Deployment Shape}{25}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion, Limitations, and Future Directions}{25}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Conclusion}{25}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Limitations}{26}{subsection.7.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {24}{\ignorespaces Limitations}}{26}{table.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Future Directions}{26}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A.}Appendix A: Complete Hyper-Parameters and Task Configuration}{28}{section.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {25}{\ignorespaces Complete hyper-parameters and task configuration}}{28}{table.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B.}Appendix B: Reproduction Commands}{28}{section.2}\protected@file@percent }
+\gdef \LT@i {\LT@entry 
+    {1}{161.7162pt}\LT@entry 
+    {1}{92.96492pt}\LT@entry 
+    {1}{198.59184pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {C.}Appendix C: File-Level Evidence Index for the Defects and Negative Results}{29}{section.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {26}{\ignorespaces File-level evidence index for the defects and negative results}}{29}{table.26}\protected@file@percent }
+\gdef \@abspage@last{31}

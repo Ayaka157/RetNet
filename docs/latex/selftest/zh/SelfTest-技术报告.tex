@@ -1,0 +1,177 @@
+%=======================================================================
+% 流水线自测用中文版前言（不是真实报告）
+% 编译：在 selftest/zh/ 下执行 xelatex 两遍
+%=======================================================================
+\documentclass[11pt,openany]{ctexart}
+
+\input{../../preamble-common.tex}
+
+% 中文字体：正文宋体 / 强调黑体 / 引用楷体 / 等宽仿宋
+\setCJKmainfont{SimSun}[BoldFont=SimHei,ItalicFont=KaiTi]
+\setCJKsansfont{Microsoft YaHei}
+\setCJKmonofont{FangSong}
+
+\hypersetup{
+  pdftitle  = {流水线自测占位报告},
+  pdfauthor = {RetNet 项目组},
+  pdfsubject= {LaTeX 流水线自测},
+}
+
+\begin{document}
+
+
+%=======================================================================
+% 流水线自测用中文版标题页 — 由 mktex.py 插在正文之前
+% 摘要与目录由构建器紧随其后插入（front matter）
+%=======================================================================
+\thispagestyle{empty}
+
+\begin{center}
+\vspace*{3.2cm}
+
+{\LARGE\bfseries 流水线自测占位报告}
+
+\vspace{0.55cm}
+
+{\large RetNet-0.5B LaTeX Pipeline Self-Test}
+
+\vspace{1.1cm}
+
+{\normalsize RetNet 项目组}
+
+\vspace{0.25cm}
+
+{\small\itshape 2026-10-13}
+
+\vspace{2.2cm}
+
+\begin{minipage}{0.80\textwidth}
+\centering\small
+\begin{tabular}{@{}rl@{}}
+\toprule
+用途 & 验证「中文单语 md → 中文版 PDF」与「英文补充稿 → 英文版 PDF」\\
+模型 & 504.18\,M 参数，20 层，1408 维，22 头（占位引用）\\
+数据 & 552.33\,M token $\times$ 3 epoch（占位引用）\\
+\bottomrule
+\end{tabular}
+\end{minipage}
+
+\vfill
+
+{\small\itshape 本 PDF 是自测产物，不是交付报告。}
+
+\vspace{1.2cm}
+\end{center}
+
+\clearpage
+
+
+\section*{摘要}
+
+\addcontentsline{toc}{section}{摘要}
+
+本占位稿由 \code{mktex\allowbreak{}.py} 的 \code{selftest} 配置读入：中文版直接取本文件正文，英文版全文来自 \code{selftest\allowbreak{}/en\allowbreak{}/\allowbreak{}\_supplement\allowbreak{}.tex}。这一节同时验证「摘要由 Markdown 提供、排在目录之前、标题进目录但不编号」 的处理方式；若把 \code{\allowbreak{}\#\allowbreak{}\# 摘要} 写成 \code{\allowbreak{}\#} 之外的其它层级，构建器会打印一条 front-matter 警告。
+
+\renewcommand{\contentsname}{目录}
+\tableofcontents
+
+\clearpage
+
+\section{引言}
+
+这一段验证中文正文的行内渲染：行内代码 \code{RETNET\allowbreak{}\_FAST\allowbreak{}\_CHUNKWISE=1}、加粗 \textbf{重点结论}、 链接 \href{README.md}{README}、以及行内数学 $d_{\mathrm{model}} = 1408$。 换行与长代码 \code{\allowbreak{}-\allowbreak{}-resume checkpoints\allowbreak{}/retnet\allowbreak{}\_500m\allowbreak{}\_v15b\allowbreak{}/checkpoint\allowbreak{}-67390} 应当正常断行。
+
+\subsection{列表与引用}
+
+\begin{itemize}
+  \item 第一项：验证无序列表；
+\end{itemize}
+\begin{itemize}
+  \item 第二项：验证嵌套列表：
+\end{itemize}
+
+\begin{enumerate}
+  \item 嵌套有序项一；
+  \item 嵌套有序项二。
+\end{enumerate}
+
+\begin{notebox}
+这一段是引用块，应当渲染成以 Note. 起头的缩进段落，而不是灰底框。
+\end{notebox}
+
+\section{架构}
+
+\subsection{模型配置表}
+
+\begin{center}
+\small
+\captionof{table}{数据构成实测}
+\begin{tabular}{>{\RaggedRight\arraybackslash}p{114.0pt}>{\RaggedRight\arraybackslash}p{91.0pt}>{\RaggedRight\arraybackslash}p{230.0pt}}
+\toprule
+\textbf{项} & \textbf{值} & \textbf{出处} \\
+\midrule
+参数量 & 504,179,896 & \code{checkpoints\allowbreak{}/retnet\allowbreak{}\_500m\allowbreak{}\_v15b\allowbreak{}\_ep3\allowbreak{}/model\allowbreak{}.safetensors} \\
+d\allowbreak{}\_model / layers / heads & 1408 / 20 / 22 & \code{config\allowbreak{}.json} \\
+存储精度 & \code{float32}（训练 bf16） & \code{config\allowbreak{}.json} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{代码块}
+
+\begin{lstlisting}[language=Python]
+def retention(x, gamma):
+    """自测用代码块：验证 listings 样式与中文注释。"""
+    return x * gamma
+\end{lstlisting}
+
+\subsection{热重启代价}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{../../figures/fig-0p5b-loss}
+\caption{三段训练的验证 loss：每段都重启一条完整 cosine，热重启后首个评测点高于上一段最优，差值见图中标注。数据源为三段 \code{trainer\_state.json}。}
+\label{fig:fig-0p5b-loss}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{../../figures/fig-0p5b-lr}
+\caption{三段的学习率轨迹：每段都重启一条完整 cosine（峰值 $1.1\times10^{-4}$、warm-up 500 步、衰减到 \code{min\_lr} $1.1\times10^{-5}$），段间不接续。数据源同上一张图。}
+\label{fig:fig-0p5b-lr}
+\end{figure}
+
+\begin{center}
+\small
+\captionof{table}{热重启的代价}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{衔接} & \textbf{上一段最优} & \textbf{下一段首次评测} & \textbf{差} \\
+\midrule
+ep1 $\rightarrow$ ep2 & 2.1035 @65000 & 2.1800 @2106 & +0.0764 \\
+ep2 $\rightarrow$ ep3 & 1.9865 @16848 & 2.1174 @2106 & +0.1310 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+三段训练共 1,656,340,480 token，token/参数 = 3.285。
+
+\backmattersection{参考文献}\label{sec:refs}
+
+\begin{enumerate}
+  \item Retentive Network: A Successor to Transformer for Large Language Models. arXiv:2307.08621.
+\end{enumerate}
+\begin{enumerate}
+  \item Gated Linear Attention Transformers with Hardware-Efficient Training. arXiv:2312.06635.
+\end{enumerate}
+
+\startappendix
+
+\section{附录 A：复现命令}
+
+\begin{lstlisting}[language=PowerShell]
+python makefigs.py
+python mktex.py --report selftest
+\end{lstlisting}
+
+\end{document}

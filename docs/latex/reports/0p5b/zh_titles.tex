@@ -1,0 +1,57 @@
+%=======================================================================
+% 中文版标题页 — RetNet-0.5B
+% 标题必须与 docs/26_RetNet-0.5B_技术报告.md 的 H1 一致（H1 不进正文）
+% 摘要与目录由 mktex.py 紧随其后插入（摘要取自 Markdown 的 `## 摘要` 一节）
+%=======================================================================
+\thispagestyle{empty}
+
+\begin{center}
+\vspace*{2.6cm}
+
+{\LARGE\bfseries RetNet-0.5B：逐段单卡训练到线上的\\[0.25em] 5.04 亿参数保留网络}
+
+\vspace{0.45cm}
+
+{\large\bfseries ——宽度生长为何未能解锁}
+
+\vspace{0.7cm}
+
+{\small RetNet-0.5B: Training a 504M-Parameter Retentive Network to Production,\\
+and Why Width Growth Never Unlocked}
+
+\vspace{0.8cm}
+
+{\normalsize RetNet 项目组}
+
+\vspace{0.25cm}
+
+{\small\itshape 2026-10-13}
+
+\vspace{1.6cm}
+
+{% 表 1 的题注在正文里属于封面块（不进正文），因此手写在这里，编号与正文衔接
+\small\textbf{表 1.} 模型摘要（数值出处见正文对应章节）}
+
+\vspace{0.5em}
+
+\begin{minipage}{0.94\textwidth}
+\centering\small
+\begin{tabular}{@{}rl@{}}
+\toprule
+模型 & 504.18\,M 参数（504,179,896），20 层，1408 维，22 头 \\
+训练 & 三段各一个 epoch，实际消耗 1,656,209,408 token（1.656\,B） \\
+硬件 & RTX 3090 24\,GB / RTX PRO 6000 96\,GB / RTX 3070 8\,GB \\
+数据 & \code{chat\_pack\_v13}，552,330,489 token 槽位，2048 token 上下文 \\
+结果 & 验证 loss 2.6358 $\rightarrow$ 1.9459；生长新增的 82 个仿射张量中 78 个逐位为 0 \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+
+\vfill
+
+{\small\itshape 本 PDF 为中文版；英文版为另一文件 RetNet-0.5B-Technical-Report.pdf。}
+
+\vspace{1.0cm}
+\end{center}
+
+\clearpage

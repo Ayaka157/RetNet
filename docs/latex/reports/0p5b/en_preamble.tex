@@ -1,0 +1,35 @@
+%=======================================================================
+% English edition preamble — RetNet-0.5B Technical Report
+% Build: xelatex twice from docs/latex/en/
+% Referenced by the `0p5b` configuration in mktex.py.
+%=======================================================================
+\documentclass[11pt,openany]{article}
+
+% Latin text fonts
+\usepackage{fontspec}
+\setmainfont{Times New Roman}[Ligatures=TeX]
+\setsansfont{Microsoft YaHei}
+\setmonofont{Consolas}[Scale=0.86]
+
+% CJK fallback.  The English edition is written in English throughout; the
+% fallback exists for the repository paths and code comments that are part of
+% the evidence, not for prose.
+\usepackage{xeCJK}
+\setCJKmainfont{SimSun}[BoldFont=SimHei,ItalicFont=KaiTi]
+\setCJKmonofont{FangSong}
+\xeCJKsetup{CJKmath=false}
+
+\input{../preamble-common.tex}
+
+\hypersetup{
+  pdftitle  = {RetNet-0.5B: Training a 504M-Parameter Retentive Network to Production, and Why Width Growth Never Unlocked},
+  pdfauthor = {RetNet Project},
+  pdfsubject= {Retentive Networks / Gated Linear Attention / Training Engineering / Serving},
+  pdfkeywords={RetNet, GLA, chunkwise, torch.compile, 8-bit AdamW, 0.5B, single-node training},
+}
+
+\fancyhead[L]{\small\itshape RetNet-0.5B Technical Report}
+\fancyhead[R]{\small\thepage}
+\fancyfoot[C]{}
+
+\begin{document}

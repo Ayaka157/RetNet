@@ -1,0 +1,23 @@
+{
+  "name": "v13_272m_2k",
+  "model_dir": "checkpoints/retnet_272m_rp",
+  "data_dir": "data_cache/chat_pack_v13",
+  "output_dir": "checkpoints/retnet_272m_v13",
+  "precision": "bf16",
+  "mode": "chunkwise",
+  "chunk_size": 64,
+  "batch_size": 4,
+  "max_steps": 12500,
+  "lr": 1.1e-4,
+  "min_lr": 1.1e-5,
+  "warmup": 300,
+  "save_steps": 2500,
+  "eval_steps": 2500,
+  "save_total_limit": 3,
+  "grad_checkpoint": true,
+  "compile": false,
+  "seed": 1234,
+  "resume": false,
+  "auto_restart_max": 3,
+  "restart_wait_min": 3
+}

@@ -1,0 +1,66 @@
+%=======================================================================
+% Pipeline self-test title block and abstract (English edition)
+% Inserted before the body; the body comes from en/_supplement.tex
+%=======================================================================
+\thispagestyle{empty}
+
+\begin{center}
+\vspace*{3.2cm}
+
+{\LARGE\bfseries LaTeX Pipeline Self-Test}
+
+\vspace{0.55cm}
+
+{\large A placeholder document for the RetNet report pipeline}
+
+\vspace{1.1cm}
+
+{\normalsize RetNet Project}
+
+\vspace{0.25cm}
+
+{\small\itshape 2026-10-13}
+
+\vspace{2.2cm}
+
+\begin{minipage}{0.80\textwidth}
+\centering\small
+\begin{tabular}{@{}rl@{}}
+\toprule
+Purpose & exercises "Chinese-only Markdown $\rightarrow$ Chinese PDF" and \\
+        & "hand-written supplement $\rightarrow$ English PDF" \\
+Model & 504.18M parameters, 20 layers, 1408 wide, 22 heads (placeholder) \\
+Data & 552.33M tokens $\times$ 3 epochs (placeholder) \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+
+\vfill
+
+{\small\itshape This PDF is a self-test artefact, not a deliverable.}
+
+\vspace{1.2cm}
+\end{center}
+
+\clearpage
+
+%-----------------------------------------------------------------------
+% Abstract
+%-----------------------------------------------------------------------
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+This document exists only to exercise the build pipeline. Its Chinese edition is generated
+from a Chinese-only Markdown file, and this English edition is generated in full from a
+hand-written supplement. Every number quoted here is copied from the 0.5B fact sheet, which
+was itself read out of the real \code{trainer\_state.json} files; nothing here is invented.
+
+\clearpage
+
+%-----------------------------------------------------------------------
+% Contents
+%-----------------------------------------------------------------------
+\renewcommand{\contentsname}{Contents}
+\tableofcontents
+
+\clearpage

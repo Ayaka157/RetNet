@@ -1,0 +1,18 @@
+{
+  "id": "ayaka157/retnet-kaggle-train-8k-fix",
+  "title": "retnet-kaggle-train-8k-fix",
+  "code_file": "retnet_kaggle_train_8k_smoke.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": true,
+  "enable_internet": false,
+  "dataset_sources": [
+    "ayaka157/retnet-v11-8k-dataset",
+    "ayaka157/retnet-272m-init-weights-2026-8-25"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

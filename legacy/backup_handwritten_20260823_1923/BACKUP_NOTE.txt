@@ -1,0 +1,5 @@
+手写实现备份（原理学习阶段产物）
+备份时间: 2026-08-23 (Stage 1 pretrain_v4 训练中, step ~503k/520k)
+内容: retnet/ scripts/ train.py play.py docs/ RUNBOOK.md README.md requirements.txt
+说明: 后续训练将改用成熟框架(HF Transformers+Trainer)重写实现并迁移参数,
+      本目录为回退依据。checkpoint 未备份(仍在 checkpoints/ 原位, 体积大)。

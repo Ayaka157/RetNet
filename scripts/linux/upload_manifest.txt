@@ -1,0 +1,17 @@
+run_task.py
+play_v2.py
+retnet_hf/
+retnet/
+bench/
+scripts/
+tasks/
+tests/
+docs/
+data_cache/chat_pack_v13/train.ids.npy
+data_cache/chat_pack_v13/train.wcode.npy
+data_cache/chat_pack_v13/val.ids.npy
+data_cache/chat_pack_v13/val.wcode.npy
+data_cache/chat_pack_v13/bpe_tokenizer.json
+data_cache/chat_pack_v13/meta.json
+checkpoints/retnet_500m/model.safetensors
+checkpoints/retnet_500m/config.json

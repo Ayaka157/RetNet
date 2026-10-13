@@ -1,0 +1,181 @@
+Launching a training on TPU cores.
+[XLA] world_size=8 device=xla:0 model_mode=chunkwise batch/device=4
+
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+/tmp/ipykernel_14/109047568.py:935: DeprecationWarning: Use torch_xla.sync instead
+  xm.mark_step()
+https://symbolize.stripped_domain/r/?trace=7c627aa360e7,7c627aa32def&map= 
+E0829 05:38:28.534899     169 process_state.cc:1175] RAW: Signal 15 raised at PC: 0x7c627aa360e7 while already in FailureSignalHandler!
+E0829 05:38:28.534931     169 process_state.cc:1210] RAW: Raising 15 signal with default behavior
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 171 (TID 171) on cpu 50 from PID 14; stack trace: ***
+*** SIGTERM received by PID 172 (TID 172) on cpu 8 from PID 14; stack trace: ***
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 176 (TID 176) on cpu 27 from PID 14; stack trace: ***
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 173 (TID 173) on cpu 32 from PID 14; stack trace: ***
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 170 (TID 170) on cpu 73 from PID 14; stack trace: ***
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c627aa32def&map= 
+*** SIGTERM received by PID 175 (TID 175) on cpu 67 from PID 14; stack trace: ***
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.666737     176 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+E0829 05:38:28.757433     176 process_state.cc:808] RAW: Raising signal 15 with default behavior
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.765245     171 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.765789     172 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.766082     170 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.766374     175 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+PC: @     0x7c627aa8d9ee  (unknown)  (unknown)
+    @     0x7c5e26db47e5       1904  (unknown)
+    @     0x7c627aa32df0  (unknown)  (unknown)
+https://symbolize.stripped_domain/r/?trace=7c627aa8d9ee,7c5e26db47e4,7c627aa32def&map= 
+E0829 05:38:28.766889     173 coredump_hook.cc:247] RAW: Remote crash gathering disabled for SIGTERM.
+E0829 05:38:28.838034     171 process_state.cc:808] RAW: Raising signal 15 with default behavior
+E0829 05:38:28.849019     175 process_state.cc:808] RAW: Raising signal 15 with default behavior
+E0829 05:38:28.854285     172 process_state.cc:808] RAW: Raising signal 15 with default behavior
+E0829 05:38:28.860066     170 process_state.cc:808] RAW: Raising signal 15 with default behavior
+E0829 05:38:28.882018     173 process_state.cc:808] RAW: Raising signal 15 with default behavior
+
+ENAME=BrokenProcessPool
+EVALUE=A process in the process pool was terminated abruptly while the future was running or pending.
+TRACEBACK:
+[31m---------------------------------------------------------------------------[39m
+[31mBrokenProcessPool[39m                         Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[5][39m[32m, line 7[39m
+[32m      3[39m [38;5;66;03m# internal launcher, not to the user training function. Therefore train_worker()[39;00m
+[32m      4[39m [38;5;66;03m# must take no positional index argument; it reads rank from torch_xla.runtime.[39;00m
+[32m      5[39m [38;5;28;01mfrom[39;00m accelerate [38;5;28;01mimport[39;00m notebook_launcher
+[32m      6[39m 
+[32m----> [39m[32m7[39m notebook_launcher(
+[32m      8[39m     train_worker,
+[32m      9[39m     args=(),
+[32m     10[39m )
+
+[36mFile [39m[32m/usr/local/lib/python3.12/site-packages/accelerate/launchers.py:153[39m, in [36mnotebook_launcher[39m[34m(function, args, num_processes, mixed_precision, use_port, master_addr, node_rank, num_nodes, rdzv_backend, rdzv_endpoint, rdzv_conf, rdzv_id, max_restarts, monitor_interval, log_line_prefix_template)[39m
+[32m    151[39m     launcher = PrepareForLaunch(function, distributed_type=[33m"[39m[33mXLA[39m[33m"[39m)
+[32m    152[39m     [38;5;28mprint[39m([33m"[39m[33mLaunching a training on TPU cores.[39m[33m"[39m)
+[32m--> [39m[32m153[39m     [30;43mxmp[39;49m[30;43m.[39;49m[30;43mspawn[39;49m[30;43m([39;49m[30;43mlauncher[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43margs[39;49m[30;43m=[39;49m[30;43margs[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mstart_method[39;49m[30;43m=[39;49m[30;43m"[39;49m[30;43mfork[39;49m[30;43m"[39;49m[30;43m)[39;49m
+[32m    154[39m [38;5;28;01melif[39;00m in_colab [38;5;129;01mand[39;00m ([38;5;129;01mnot[39;00m torch.cuda.is_available() [38;5;129;01mor[39;00m get_gpu_info()[[32m1[39m] < [32m2[39m):
+[32m    155[39m     [38;5;66;03m# No need for a distributed launch otherwise as it's either CPU or one GPU.[39;00m
+[32m    156[39m     [38;5;28;01mif[39;00m torch.cuda.is_available():
+
+[36mFile [39m[32m/usr/local/lib/python3.12/site-packages/torch_xla/distributed/xla_multiprocessing.py:43[39m, in [36mspawn[39m[34m(fn, args, nprocs, join, daemon, start_method)[39m
+[32m     10[39m [38;5;28;01mdef[39;00m[38;5;250m [39m[34mspawn[39m(fn,
+[32m     11[39m           args=(),
+[32m     12[39m           nprocs=[38;5;28;01mNone[39;00m,
+[32m     13[39m           join=[38;5;28;01mTrue[39;00m,
+[32m     14[39m           daemon=[38;5;28;01mFalse[39;00m,
+[32m     15[39m           start_method=[33m'[39m[33mspawn[39m[33m'[39m):
+[32m     16[39m [38;5;250m  [39m[33;03m"""Enables multi processing based replication.[39;00m
+[32m     17[39m 
+[32m     18[39m [33;03m  Args:[39;00m
+[32m   (...)[39m[32m     41[39m [33;03m    return None.[39;00m
+[32m     42[39m [33;03m  """[39;00m
+[32m---> [39m[32m43[39m   [38;5;28;01mreturn[39;00m [30;43mpjrt[39;49m[30;43m.[39;49m[30;43mspawn[39;49m[30;43m([39;49m[30;43mfn[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mnprocs[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mstart_method[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43margs[39;49m[30;43m)[39;49m
+
+[36mFile [39m[32m/usr/local/lib/python3.12/site-packages/torch_xla/_internal/pjrt.py:213[39m, in [36mspawn[39m[34m(fn, nprocs, start_method, args)[39m
+[32m    208[39m [38;5;28;01melif[39;00m nprocs [38;5;129;01mis[39;00m [38;5;129;01mnot[39;00m [38;5;28;01mNone[39;00m:
+[32m    209[39m   [38;5;28;01mraise[39;00m [38;5;167;01mValueError[39;00m(
+[32m    210[39m       [33m'[39m[33mUnsupported nprocs ([39m[38;5;132;01m%d[39;00m[33m). Please use nprocs=1 or None (default). If None, spawn will use all available devices. Use the environment variable X_NUM_DEVICES (where X is CPU, GPU, TPU, NEURONCORE, etc) to limit the number of devices used.[39m[33m'[39m
+[32m    211[39m       % nprocs)
+[32m--> [39m[32m213[39m [30;43mrun_multiprocess[39;49m[30;43m([39;49m[30;43mspawn_fn[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mstart_method[39;49m[30;43m=[39;49m[30;43mstart_method[39;49m[30;43m)[39;49m
+
+[36mFile [39m[32m/usr/local/lib/python3.12/site-packages/torch_xla/_internal/pjrt.py:169[39m, in [36mrun_multiprocess[39m[34m(fn, start_method, *args, **kwargs)[39m
+[32m    163[39m   mp_fn = functools.partial(
+[32m    164[39m       _run_thread_per_device,
+[32m    165[39m       local_world_size=num_processes,
+[32m    166[39m       fn=functools.partial(fn, *args, **kwargs),
+[32m    167[39m       initializer_fn=initialize_multiprocess)
+[32m    168[39m   process_results = executor.map(mp_fn, [38;5;28mrange[39m(num_processes))
+[32m--> [39m[32m169[39m   replica_results = [30;43mlist[39;49m[30;43m([39;49m
+[32m    170[39m [30;43m      [39;49m[30;43mitertools[39;49m[30;43m.[39;49m[30;43mchain[39;49m[30;43m.[39;49m[30;43mfrom_iterable[39;49m[30;43m([39;49m
+[32m    171[39m [30;43m          [39;49m[30;43mresult[39;49m[30;43m.[39;49m[30;43mitems[39;49m[30;43m([39;49m[30;43m)[39;49m[30;43m [39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43mresult[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43mprocess_results[39;49m[30;43m)[39;49m[30;43m)[39;49m
+[32m    173[39m [38;5;28;01mreturn[39;00m _merge_replica_results(replica_results)
+
+[36mFile [39m[32m/usr/local/lib/python3.12/site-packages/torch_xla/_internal/pjrt.py:171[39m, in [36m<genexpr>[39m[34m(.0)[39m
+[32m    163[39m   mp_fn = functools.partial(
+[32m    164[39m       _run_thread_per_device,
+[32m    165[39m       local_world_size=num_processes,
+[32m    166[39m       fn=functools.partial(fn, *args, **kwargs),
+[32m    167[39m       initializer_fn=initialize_multiprocess)
+[32m    168[39m   process_results = executor.map(mp_fn, [38;5;28mrange[39m(num_processes))
+[32m    169[39m   replica_results = [38;5;28mlist[39m(
+[32m    170[39m       itertools.chain.from_iterable[30;43m([39;49m
+[32m--> [39m[32m171[39m [30;43m          [39;49m[30;43mresult[39;49m[30;43m.[39;49m[30;43mitems[39;49m[30;43m([39;49m[30;43m)[39;49m[30;43m [39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43mresult[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43mprocess_results[39;49m[30;43m)[39;49m)
+[32m    173[39m [38;5;28;01mreturn[39;00m _merge_replica_results(replica_results)
+
+[36mFile [39m[32m/usr/local/lib/python3.12/concurrent/futures/process.py:636[39m, in [36m_chain_from_iterable_of_lists[39m[34m(iterable)[39m
+[32m    630[39m [38;5;28;01mdef[39;00m[38;5;250m [39m[34m_chain_from_iterable_of_lists[39m(iterable):
+[32m    631[39m [38;5;250m    [39m[33;03m"""[39;00m
+[32m    632[39m [33;03m    Specialized implementation of itertools.chain.from_iterable.[39;00m
+[32m    633[39m [33;03m    Each item in *iterable* should be a list.  This function is[39;00m
+[32m    634[39m [33;03m    careful not to keep references to yielded objects.[39;00m
+[32m    635[39m [33;03m    """[39;00m
+[32m--> [39m[32m636[39m [30;43m    [39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43melement[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43miterable[39;49m[30;43m:[39;49m
+[32m    637[39m [30;43m        [39;49m[30;43melement[39;49m[30;43m.[39;49m[30;43mreverse[39;49m[30;43m([39;49m[30;43m)[39;49m
+[32m    638[39m [30;43m        [39;49m[30;43;01mwhile[39;49;00m[30;43m [39;49m[30;43melement[39;49m[30;43m:[39;49m
+
+[36mFile [39m[32m/usr/local/lib/python3.12/concurrent/futures/_base.py:619[39m, in [36mExecutor.map.<locals>.result_iterator[39m[34m()[39m
+[32m    616[39m [38;5;28;01mwhile[39;00m fs:
+[32m    617[39m     [38;5;66;03m# Careful not to keep a reference to the popped future[39;00m
+[32m    618[39m     [38;5;28;01mif[39;00m timeout [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m:
+[32m--> [39m[32m619[39m         [38;5;28;01myield[39;00m [30;43m_result_or_cancel[39;49m[30;43m([39;49m[30;43mfs[39;49m[30;43m.[39;49m[30;43mpop[39;49m[30;43m([39;49m[30;43m)[39;49m[30;43m)[39;49m
+[32m    620[39m     [38;5;28;01melse[39;00m:
+[32m    621[39m         [38;5;28;01myield[39;00m _result_or_cancel(fs.pop(), end_time - time.monotonic())
+
+[36mFile [39m[32m/usr/local/lib/python3.12/concurrent/futures/_base.py:317[39m, in [36m_result_or_cancel[39m[34m(***failed resolving arguments***)[39m
+[32m    315[39m [38;5;28;01mtry[39;00m:
+[32m    316[39m     [38;5;28;01mtry[39;00m:
+[32m--> [39m[32m317[39m         [38;5;28;01mreturn[39;00m [30;43mfut[39;49m[30;43m.[39;49m[30;43mresult[39;49m[30;43m([39;49m[30;43mtimeout[39;49m[30;43m)[39;49m
+[32m    318[39m     [38;5;28;01mfinally[39;00m:
+[32m    319[39m         fut.cancel()
+
+[36mFile [39m[32m/usr/local/lib/python3.12/concurrent/futures/_base.py:456[39m, in [36mFuture.result[39m[34m(self, timeout)[39m
+[32m    454[39m     [38;5;28;01mraise[39;00m CancelledError()
+[32m    455[39m [38;5;28;01melif[39;00m [38;5;28mself[39m._state == FINISHED:
+[32m--> [39m[32m456[39m     [38;5;28;01mreturn[39;00m [30;43mself[39;49m[30;43m.[39;49m[30;43m__get_result[39;49m[30;43m([39;49m[30;43m)[39;49m
+[32m    457[39m [38;5;28;01melse[39;00m:
+[32m    458[39m     [38;5;28;01mraise[39;00m [38;5;167;01mTimeoutError[39;00m()
+
+[36mFile [39m[32m/usr/local/lib/python3.12/concurrent/futures/_base.py:401[39m, in [36mFuture.__get_result[39m[34m(self)[39m
+[32m    399[39m [38;5;28;01mif[39;00m [38;5;28mself[39m._exception:
+[32m    400[39m     [38;5;28;01mtry[39;00m:
+[32m--> [39m[32m401[39m         [38;5;28;01mraise[39;00m [38;5;28mself[39m._exception
+[32m    402[39m     [38;5;28;01mfinally[39;00m:
+[32m    403[39m         [38;5;66;03m# Break a reference cycle with the exception in self._exception[39;00m
+[32m    404[39m         [38;5;28mself[39m = [38;5;28;01mNone[39;00m
+
+[31mBrokenProcessPool[39m: A process in the process pool was terminated abruptly while the future was running or pending.

@@ -1,0 +1,40 @@
+\contentsline {section}{Abstract}{2}{Doc-Start}%
+\contentsline {section}{\numberline {1}Introduction}{5}{section.1}%
+\contentsline {section}{\numberline {2}Architecture}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Retention}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}The Learned Per-Head Decay Gate}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Three Computation Forms and the Closed-Form Chunkwise Scan}{6}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Growth Layer Norm --- and Why It Did Not Activate in This Model}{7}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}0.5B Configuration}{8}{subsection.2.5}%
+\contentsline {section}{\numberline {3}General Infrastructures}{9}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Training Stack}{9}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}The Feasible Envelope of Memory and Batch Size}{10}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Composition of One Step}{10}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Defects That Raise No Error, in Four Classes by Consequence}{12}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Negative Results}{13}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Pre-Training}{15}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Data Composition}{15}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Settings of the Three Legs}{16}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Loss Trajectory}{17}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}The Cost of the Hot Restarts}{20}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Compute, Memory and Cost}{20}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Tokens per Parameter, and What the Budget Explains}{21}{subsection.4.6}%
+\contentsline {section}{\numberline {5}Evaluation}{22}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Benchmark Design}{22}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Results}{22}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Pass Rate by Difficulty}{23}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Stopping Behaviour and Leakage}{23}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Honest Conclusion}{23}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Qualitative Observation}{24}{subsection.5.6}%
+\contentsline {section}{\numberline {6}Inference and Serving}{24}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Training Uses Chunkwise, Prefill Parallel, Decoding Recurrent}{24}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Decode Throughput}{24}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Serving Implementation Notes}{25}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Deployment Shape}{25}{subsection.6.4}%
+\contentsline {section}{\numberline {7}Conclusion, Limitations, and Future Directions}{25}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Conclusion}{25}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Limitations}{26}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Future Directions}{26}{subsection.7.3}%
+\contentsline {section}{\numberline {A.}Appendix A: Complete Hyper-Parameters and Task Configuration}{28}{section.1}%
+\contentsline {section}{\numberline {B.}Appendix B: Reproduction Commands}{28}{section.2}%
+\contentsline {section}{\numberline {C.}Appendix C: File-Level Evidence Index for the Defects and Negative Results}{29}{section.3}%

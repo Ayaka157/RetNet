@@ -1,0 +1,22 @@
+%=======================================================================
+% 中文版前言 — RetNet-0.5B 技术报告
+% 编译：在 docs/latex/zh/ 下执行 xelatex 两遍（生成目录与交叉引用）
+% 由 mktex.py 的 0p5b 配置引用
+%=======================================================================
+\documentclass[11pt,openany]{ctexart}
+
+\input{../preamble-common.tex}
+
+% 中文字体：正文宋体 / 强调黑体 / 引用楷体 / 等宽仿宋
+\setCJKmainfont{SimSun}[BoldFont=SimHei,ItalicFont=KaiTi]
+\setCJKsansfont{Microsoft YaHei}
+\setCJKmonofont{FangSong}
+
+\hypersetup{
+  pdftitle  = {RetNet-0.5B：逐段单卡训练到线上的 5.04 亿参数保留网络——宽度生长为何未能解锁},
+  pdfauthor = {RetNet 项目组},
+  pdfsubject= {保留网络 / 门控线性注意力 / 训练工程 / 推理与服务},
+  pdfkeywords={RetNet, GLA, chunkwise, torch.compile, 8-bit AdamW, 0.5B, 单机训练},
+}
+
+\begin{document}

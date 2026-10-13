@@ -1,0 +1,215 @@
+% =====================================================================
+%  preamble-common.tex
+%  Shared preamble for the RetNet-272M technical report (Chinese and
+%  English editions).  Build with XeLaTeX.
+%
+%  Typographic convention (deliberately plain, single column, as in a
+%  conventional technical report):
+%    * serif body text, no coloured display headings
+%    * numbered tables and figures, each with a caption
+%    * remarks set as an indented, labelled passage rather than a
+%      coloured box
+% =====================================================================
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+
+% ---------- layout ---------------------------------------------------
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.4cm,right=2.4cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+% A table taller than a page must be able to break across pages: an unbreakable
+% `tabular` that large is shipped out past the paper edge (Overfull \vbox), and
+% the part below the edge is what the reader loses.  `longtable` is used only
+% for such tables (see mktex.render_table).
+\usepackage{longtable}
+\usepackage{ragged2e}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{graphicx}
+
+% ---------- code -----------------------------------------------------
+\usepackage{listings}
+\usepackage{newunicodechar}
+
+% ---------- references ----------------------------------------------
+\usepackage[hidelinks,bookmarksnumbered]{hyperref}
+\usepackage{bookmark}
+
+% ---------- colours (used sparingly: code and rules only) ------------
+\definecolor{codebg}{RGB}{248,248,249}
+\definecolor{codeframe}{RGB}{216,220,225}
+\definecolor{codecomment}{RGB}{104,124,108}
+\definecolor{codekeyword}{RGB}{0,80,150}
+\definecolor{codestring}{RGB}{160,60,40}
+\definecolor{rulecol}{RGB}{178,182,188}
+\definecolor{headrule}{RGB}{40,48,60}
+
+% ---------- spacing --------------------------------------------------
+\linespread{1.04}
+\setlength{\parskip}{0.30em}
+\setlength{\parindent}{0pt}
+\setlength{\abovedisplayskip}{6pt}
+\setlength{\belowdisplayskip}{6pt}
+\setlength{\abovedisplayshortskip}{4pt}
+\setlength{\belowdisplayshortskip}{4pt}
+
+% Mixed CJK / monospace prose has few hyphenation opportunities; give TeX
+% more room to stretch instead of leaving overfull boxes.
+\tolerance=3000
+\emergencystretch=3em
+\hyphenpenalty=50
+\hbadness=10000
+
+% ---------- headings: plain, black, not coloured ---------------------
+\titleformat{\section}
+  {\normalfont\large\bfseries}{\thesection}{0.7em}{}
+\titleformat{\subsection}
+  {\normalfont\normalsize\bfseries}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\itshape}{\thesubsubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{1.5em}{0.55em}
+\titlespacing*{\subsection}{0pt}{1.05em}{0.40em}
+\titlespacing*{\subsubsection}{0pt}{0.85em}{0.30em}
+
+% ---------- header / footer ------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyfoot[C]{\small\thepage}
+
+% ---------- tables and figures ---------------------------------------
+\renewcommand{\arraystretch}{1.18}
+\setlength{\tabcolsep}{5pt}
+\captionsetup{
+  font=small,
+  labelfont=bf,
+  labelsep=period,
+  justification=raggedright,
+  singlelinecheck=false,
+  skip=5pt,
+}
+\captionsetup[table]{position=top}
+\captionsetup[figure]{position=bottom}
+
+% A numbered table with its caption above, as in the reference report.
+\newenvironment{reporttable}[1]
+  {\begin{center}\small\captionof{table}{#1}}
+  {\end{center}}
+\newcommand{\tabnote}[1]{\par\vspace{2pt}{\footnotesize #1}}
+
+% ---------- lists ----------------------------------------------------
+\setlist[itemize]{topsep=0.25em,itemsep=0.12em,parsep=0.08em,leftmargin=1.5em}
+\setlist[enumerate]{topsep=0.25em,itemsep=0.12em,parsep=0.08em,leftmargin=1.8em}
+
+% ---------- inline code ----------------------------------------------
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\file}[1]{\texttt{\small #1}}
+
+% ---------- code listings --------------------------------------------
+\lstdefinestyle{report}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\fontsize{8.1}{9.6}\selectfont,
+  commentstyle=\color{codecomment}\itshape,
+  keywordstyle=\color{codekeyword}\bfseries,
+  stringstyle=\color{codestring},
+  frame=single,
+  rulecolor=\color{codeframe},
+  framesep=5pt,
+  framexleftmargin=5pt,
+  xleftmargin=5pt,
+  breaklines=true,
+  breakatwhitespace=false,
+  breakindent=1.2em,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  tabsize=4,
+  aboveskip=0.6em,
+  belowskip=0.6em,
+  upquote=true,
+  extendedchars=true,
+  inputencoding=utf8,
+  escapechar=|,
+  texcl=false,
+  literate=%
+    {→}{{$\rightarrow$}}1
+    {←}{{$\leftarrow$}}1
+    {×}{{$\times$}}1
+    {÷}{{$\div$}}1
+    {≈}{{$\approx$}}1
+    {≤}{{$\leq$}}1
+    {≥}{{$\geq$}}1
+    {≠}{{$\neq$}}1
+    {µ}{{$\mu$}}1
+    {γ}{{$\gamma$}}1
+    {Δ}{{$\Delta$}}1
+    {σ}{{$\sigma$}}1
+    {τ}{{$\tau$}}1
+    {Σ}{{$\Sigma$}}1
+    {√}{{$\surd$}}1
+    {·}{{$\cdot$}}1
+    {−}{{$-$}}1
+    {∈}{{$\in$}}1
+    {±}{{$\pm$}}1
+    {∞}{{$\infty$}}1
+    {❌}{{$\times$}}1
+    {✅}{{$\checkmark$}}1
+    {⚠}{{!}}1
+}
+\lstset{style=report}
+
+% `listings` ships no PowerShell dialect; define just enough to colour it.
+\lstdefinelanguage{PowerShell}{
+  morekeywords={if,else,elseif,foreach,for,while,function,param,return,
+    try,catch,finally,switch,break,continue,throw,in,not,and,or},
+  sensitive=false,
+  morecomment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]',
+}
+\lstdefinelanguage{text}{}
+
+% ---------- remarks --------------------------------------------------
+% The source uses block quotes for asides.  They are set as an indented
+% passage introduced by "Note." rather than as a coloured box.
+\newenvironment{notebox}
+  {\par\vspace{0.35em}%
+   \begin{list}{}{%
+     \setlength{\leftmargin}{1.5em}\setlength{\rightmargin}{0.4em}%
+     \setlength{\topsep}{0pt}\setlength{\parskip}{0.25em}%
+     \setlength{\parsep}{0.25em}\setlength{\itemsep}{0pt}%
+     \setlength{\listparindent}{0pt}}%
+   \item\relax\textbf{Note.}\ \ignorespaces}
+  {\end{list}\vspace{0.15em}}
+
+% ---------- rule -----------------------------------------------------
+\newcommand{\reportrule}{\par\vspace{0.5em}{\color{rulecol}\hrule height 0.4pt}\vspace{0.7em}\par}
+
+% ---------- appendices -----------------------------------------------
+% The source writes the appendix titles with their letter already in the
+% text ("Appendix A: Reproduction"), so the appendix section counter prints
+% the letter and the *headings* of the back matter use a second counter that
+% renumbers (Reference Reliability Note, References).
+\newcounter{backmatter}
+\newcommand{\startappendix}{%
+  \clearpage
+  \setcounter{section}{0}%
+  \setcounter{backmatter}{0}%
+  \renewcommand{\thesection}{\Alph{section}.}%
+  % subsections are numbered against the appendix letter, so pin the format
+  % explicitly: leaving \thesubsection as \thesection.\arabic{subsection}
+  % would print `B..1' because \thesection already ends in a period.
+  \renewcommand{\thesubsection}{\Alph{section}.\arabic{subsection}}%
+}
+\newcommand{\backmattersection}[1]{%
+  \refstepcounter{backmatter}%
+  \section*{\arabic{backmatter}.\quad #1}%
+  \addcontentsline{toc}{section}{\protect\numberline{\arabic{backmatter}.}#1}%
+}

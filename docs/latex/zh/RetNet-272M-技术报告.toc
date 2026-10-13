@@ -1,0 +1,51 @@
+\contentsline {section}{摘要}{2}{Doc-Start}%
+\contentsline {section}{\numberline {1}引言 / Introduction}{5}{section.1}%
+\contentsline {section}{\numberline {2}背景 / Background}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}保留机制（Retention）}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}门控线性注意力（GLA）}{5}{subsection.2.2}%
+\contentsline {section}{\numberline {3}模型架构 / Architecture}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}配置}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}多尺度保留}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}对数空间衰减掩码（一个真实的数值陷阱）}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}分块递推与闭式扫描（本文的主要算法贡献）}{7}{subsection.3.4}%
+\contentsline {subsubsection}{\numberline {3.4.1}参考分块形式}{7}{subsubsection.3.4.1}%
+\contentsline {subsubsection}{\numberline {3.4.2}关键观察}{7}{subsubsection.3.4.2}%
+\contentsline {section}{\numberline {4}数据 / Data}{8}{section.4}%
+\contentsline {subsection}{\numberline {4.1}实测构成}{8}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}对话编码}{8}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}packing 的副作用}{8}{subsection.4.3}%
+\contentsline {section}{\numberline {5}训练管线 / Training Pipeline}{9}{section.5}%
+\contentsline {subsection}{\numberline {5.1}配置}{9}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}训练分段}{9}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}一个被踩中过的静默正确性 bug：HF 的损失归一化}{10}{subsection.5.3}%
+\contentsline {section}{\numberline {6}工程优化 / Engineering Optimizations}{10}{section.6}%
+\contentsline {subsection}{\numberline {6.1}测量方法}{10}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}结果}{10}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}内核级归因}{11}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}衰减表的发射次数优化}{12}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}修复 \texttt {\small torch.compile} 的两个静默失效}{12}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}三个死配置字段}{12}{subsection.6.6}%
+\contentsline {subsection}{\numberline {6.7}GEMM 到底离硬件上限有多远}{14}{subsection.6.7}%
+\contentsline {subsection}{\numberline {6.8}负结果}{15}{subsection.6.8}%
+\contentsline {section}{\numberline {7}正确性缺陷 / Correctness Defects}{16}{section.7}%
+\contentsline {subsection}{\numberline {7.1}\texttt {\small \_orig\_mod.} 后缀：所有检查点不可加载}{16}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}续训路径从来没有工作过}{17}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}一个"自己跟自己比"的等价性测试}{17}{subsection.7.3}%
+\contentsline {section}{\numberline {8}评测 / Evaluation}{18}{section.8}%
+\contentsline {subsection}{\numberline {8.1}基准构成}{18}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}一个必须写下来的度量缺陷}{18}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}已完成的对照}{19}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}一个待检验的因果假说：退火后重启学习率}{20}{subsection.8.4}%
+\contentsline {section}{\numberline {9}局限与未来工作 / Limitations}{20}{section.9}%
+\contentsline {section}{\numberline {10}结论 / Conclusion}{21}{section.10}%
+\contentsline {section}{\numberline {1.}参考文献}{21}{backmatter.1}%
+\contentsline {subsection}{\numberline {10.1}引用可靠性说明}{22}{subsection.10.1}%
+\contentsline {section}{\numberline {A.}附录 A：复现命令 / Appendix A: Reproduction}{23}{section.1}%
+\contentsline {section}{\numberline {B.}附录 B：关键代码 / Appendix B: Key Code}{23}{section.2}%
+\contentsline {subsection}{\numberline {B.1}B.1 闭式状态扫描（\texttt {\small retnet\allowbreak {}\_hf\allowbreak {}/retention\allowbreak {}\_fast\allowbreak {}.py}）}{23}{subsection.2.1}%
+\contentsline {subsection}{\numberline {B.2}B.2 对数空间衰减掩码（\texttt {\small retnet\allowbreak {}\_hf\allowbreak {}/retention\allowbreak {}\_fast\allowbreak {}.py}）}{24}{subsection.2.2}%
+\contentsline {subsection}{\numberline {B.3}B.3 就地编译（\texttt {\small retnet\allowbreak {}\_hf\allowbreak {}/train\allowbreak {}.py}）}{24}{subsection.2.3}%
+\contentsline {subsection}{\numberline {B.4}B.4 导出自检（\texttt {\small retnet\allowbreak {}\_hf\allowbreak {}/train\allowbreak {}.py}）}{24}{subsection.2.4}%
+\contentsline {subsection}{\numberline {B.5}B.5 续训路径（\texttt {\small retnet\allowbreak {}\_hf\allowbreak {}/train\allowbreak {}.py}）}{24}{subsection.2.5}%
+\contentsline {section}{\numberline {C.}附录 C：外部旗标控制（\texttt {\small retnet\allowbreak {}\_hf\allowbreak {}/control\allowbreak {}.py}）}{25}{section.3}%
+\contentsline {section}{\numberline {D.}附录 D：本文报告的缺陷清单 / Appendix D: Defect Summary}{25}{section.4}%

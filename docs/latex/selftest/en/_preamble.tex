@@ -1,0 +1,32 @@
+%=======================================================================
+% Pipeline self-test preamble (English edition) -- not a real report
+% Build: xelatex twice from selftest/en/
+%=======================================================================
+\documentclass[11pt,openany]{article}
+
+% Latin text fonts
+\usepackage{fontspec}
+\setmainfont{Times New Roman}[Ligatures=TeX]
+\setsansfont{Microsoft YaHei}
+\setmonofont{Consolas}[Scale=0.86]
+
+% CJK fallback: the self-test edition is English-only, but the shared preamble
+% and the code listings may still carry Chinese comments.
+\usepackage{xeCJK}
+\setCJKmainfont{SimSun}[BoldFont=SimHei,ItalicFont=KaiTi]
+\setCJKmonofont{FangSong}
+\xeCJKsetup{CJKmath=false}
+
+\input{../../preamble-common.tex}
+
+\hypersetup{
+  pdftitle  = {LaTeX Pipeline Self-Test},
+  pdfauthor = {RetNet Project},
+  pdfsubject= {LaTeX pipeline self-test},
+}
+
+\fancyhead[L]{\small\itshape LaTeX Pipeline Self-Test}
+\fancyhead[R]{\small\thepage}
+\fancyfoot[C]{}
+
+\begin{document}

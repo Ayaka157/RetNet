@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RetNet 0.5B · play</title>
+<style>
+  /* 夜间（默认）：一套变量 */
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --fg:#e6e9ef; --muted:#98a1b3; --accent:#5b9dff; --accent2:#7ee0a8;
+    --think:#8b93a7; --warn:#ffb84d; --err:#ff6b6b;
+    --userfg:#cfe0ff; --thinkbg:rgba(255,255,255,.025); --btnfg:#08111f;
+  }
+  /* 日间：只换变量值，组件本身一行不改 */
+  :root[data-theme="light"]{
+    --bg:#f5f6f8; --panel:#ffffff; --panel2:#eef1f5; --line:#d8dee7;
+    --fg:#1b2230; --muted:#5f6b7d; --accent:#2563eb; --accent2:#0f9d58;
+    --think:#6b7280; --warn:#b45309; --err:#dc2626;
+    --userfg:#1d4ed8; --thinkbg:rgba(0,0,0,.035); --btnfg:#ffffff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+    display:flex;flex-direction:column;height:100dvh}
+  header{display:flex;align-items:center;gap:10px;padding:11px 16px;
+    border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+  header h1{font-size:15px;margin:0;font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+  .dot.ok{background:var(--accent2)} .dot.busy{background:var(--warn)}
+  .stat{color:var(--muted);font-size:12px}
+  header .spacer{flex:1}
+  button{background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+    border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--btnfg);font-weight:600}
+  button:disabled{opacity:.5;cursor:default}
+  main{flex:1;overflow-y:auto;padding:18px 16px 8px;max-width:900px;width:100%;margin:0 auto}
+  .msg{margin:0 0 18px;display:flex;gap:10px}
+  .msg .who{flex:0 0 44px;color:var(--muted);font-size:12px;padding-top:3px}
+  .msg .body{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word}
+  .msg.user .body{color:var(--userfg)}
+  .thinkbox{margin:0 0 8px;padding:7px 10px;border-left:2px solid var(--line);
+    background:var(--thinkbg);border-radius:0 8px 8px 0}
+  .thinkbox .tl{color:var(--think);font-size:11.5px;letter-spacing:.02em;margin-bottom:3px}
+  .thinkbox .tx{color:var(--think);font-size:13px;white-space:pre-wrap}
+  details.think{margin:0 0 8px}
+  details.think summary{color:var(--think);font-size:12px;cursor:pointer;outline:none;
+    list-style:none;padding:4px 8px;border-left:2px solid var(--line)}
+  details.think summary::-webkit-details-marker{display:none}
+  details.think summary:hover{color:var(--fg)}
+  details.think .tx{color:var(--think);font-size:13px;white-space:pre-wrap;
+    padding:4px 0 0 10px;border-left:2px solid var(--line)}
+  details.think.unclosed summary{color:var(--warn);border-left-color:var(--warn)}
+  .stats{color:var(--muted);font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
+  .stats .warn{color:var(--warn)}
+  .hint{color:var(--muted);font-size:13px;text-align:center;margin:24px 0}
+  .err{color:var(--err);font-size:13px}
+  .sys{color:var(--warn);font-size:13px}
+  footer{border-top:1px solid var(--line);background:var(--panel);padding:8px 16px 14px}
+  .wrap{max-width:900px;margin:0 auto}
+  .hyper{color:var(--muted);font-size:11.5px;line-height:1.7;margin:0 0 7px;
+    font-variant-numeric:tabular-nums;word-break:break-all}
+  .hyper b{color:var(--fg);font-weight:600;opacity:.85}
+  .hyper .sys-bit{color:var(--warn)}
+  .row{display:flex;gap:8px;align-items:flex-end}
+  textarea{flex:1;resize:none;min-height:46px;max-height:200px;background:var(--panel2);
+    color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+    font:inherit;outline:none}
+  textarea:focus{border-color:var(--accent)}
+  textarea::placeholder{color:var(--muted)}
+  #settings{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:10px 14px;margin-bottom:10px;padding:12px;background:var(--panel2);
+    border:1px solid var(--line);border-radius:10px}
+  #settings.on{display:grid}
+  #settings label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+  #settings .wide{grid-column:1/-1}
+  input,select{background:var(--bg);color:var(--fg);border:1px solid var(--line);
+    border-radius:7px;padding:6px 8px;font:inherit;font-size:13px;width:100%}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .presets button{padding:4px 9px;font-size:12px}
+  .foot{margin-top:7px;display:flex;gap:12px;align-items:center;color:var(--muted);
+    font-size:12px;flex-wrap:wrap;min-height:18px}
+  .foot .spacer{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>RetNet 0.5B · play</h1>
+  <span class="dot" id="dot"></span>
+  <span class="stat" id="stat">连接中…</span>
+  <span class="spacer"></span>
+  <button id="btnTheme" title="切换日间/夜间">☀ 日间</button>
+  <button id="btnSet">设置</button>
+  <button id="btnClear">清空</button>
+</header>
+
+<main id="log">
+  <div class="hint">
+    和一个 <b>504M 参数</b>的 RetNet 小模型聊天。它是角色扮演/闲聊向的，<b>不懂技术知识</b>，
+    问知识题会一本正经地编。推理在本地一张 3070 上跑，<b>同时只服务一个人</b>——慢的话是有人排队。
+    <br><br>想让它进入角色，打开「设置」在<b>指令</b>里写人设；模型的 <code>&lt;think&gt;</code>
+    推理段默认自动折叠，<b>没闭合时会亮黄提示并替你展开</b>。
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div id="settings">
+      <label class="wide">指令 / 角色设定（system prompt）
+        <textarea id="system" rows="2" placeholder="例如：你是李欣怡，一个话不多的软件工程师，回答简短直接。"></textarea>
+        <div class="presets">
+          <button data-sys="你是李欣怡，一个话不多的软件工程师，回答简短、直接、口语化。">人设：工程师</button>
+          <button data-sys="你是一只傲娇的猫娘，说话带点撒娇，偶尔用「喵」，但不要每句都加。">人设：猫娘</button>
+          <button data-sys="你是一个吐槽役助手，回答犀利幽默，但不刻薄。">人设：吐槽役</button>
+          <button data-sys="">清空</button>
+        </div>
+      </label>
+      <label>上下文长度（token）
+        <select id="context">
+          <option value="512">512（最快，记不住前面）</option>
+          <option value="1024">1024</option>
+          <option value="1536">1536</option>
+          <option value="2048" selected>2048（模型窗口上限）</option>
+        </select>
+      </label>
+      <label>温度 temperature <input type="number" id="temperature" value="0.7" step="0.05" min="0.05" max="1.5"></label>
+      <label>top_p <input type="number" id="top_p" value="0.9" step="0.05" min="0.05" max="1"></label>
+      <label>top_k <input type="number" id="top_k" value="40" step="5" min="1" max="200"></label>
+      <label>最多生成 token <input type="number" id="max_new_tokens" value="220" step="20" min="16" max="512"></label>
+      <label>重复惩罚 <input type="number" id="repetition_penalty" value="1.1" step="0.02" min="1" max="1.5"></label>
+    </div>
+    <div class="hyper" id="hyper"></div>
+    <div class="row">
+      <textarea id="input" rows="1" placeholder="说点什么…（Enter 发送，Shift+Enter 换行）"></textarea>
+      <button class="primary" id="btnSend">发送</button>
+      <button id="btnStop" disabled>停止</button>
+    </div>
+    <div class="foot">
+      <span id="tip"></span><span class="spacer"></span><span id="meta"></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// 全部相对路径：页面在 /play/ 下 → api/* 解析成 /play/api/*
+const API = "api";
+const $ = (id) => document.getElementById(id);
+const log = $("log"), input = $("input");
+const history = [];                 // [{user, reply_ids}] —— id 由服务端回传
+let controller = null, busy = false;
+let modelInfo = { params: 0, device: "?", dtype: "?", model: "" };
+
+const qs = new URLSearchParams(location.search);
+const token = qs.get("t") || localStorage.getItem("retnet_token") || "";
+if (qs.get("t")) localStorage.setItem("retnet_token", qs.get("t"));
+const withToken = (u) => token ? (u + (u.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(token)) : u;
+
+/* ---- 主题：默认跟随系统，手动切过就记住 ---- */
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("retnet_theme", t); } catch (e) {}
+  const b = $("btnTheme");
+  if (b) b.textContent = (t === "light") ? "🌙 夜间" : "☀ 日间";
+}
+applyTheme(localStorage.getItem("retnet_theme")
+  || ((window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark"));
+$("btnTheme").onclick = () => applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+
+$("btnSet").onclick = () => { $("settings").classList.toggle("on"); renderHyper(); };
+document.querySelectorAll(".presets button").forEach(b => {
+  b.onclick = () => { $("system").value = b.dataset.sys || ""; renderHyper(); };
+});
+$("btnClear").onclick = () => {
+  history.length = 0; log.innerHTML = ""; $("meta").textContent = "";
+  const d = document.createElement("div");
+  d.className = "hint";
+  d.innerHTML = '已清空。它是角色扮演/闲聊向的 0.5B 小模型，<b>知识类问题会瞎编</b>。';
+  log.appendChild(d);
+};
+
+/* ---- 输入栏上方的超参小字 ---- */
+function sysLabel(){
+  const s = $("system").value.trim();
+  if (!s) return "";
+  return s.length > 24 ? s.slice(0, 24) + "…" : s;
+}
+function renderHyper(){
+  const bits = [
+    `<b>${modelInfo.model || "retnet_500m_v15b_ep3"}</b>`,
+    `${(modelInfo.params / 1e6).toFixed(0)}M`,
+    `${modelInfo.device}/${modelInfo.dtype}`,
+    `temp <b>${$("temperature").value}</b>`,
+    `top_p <b>${$("top_p").value}</b>`,
+    `top_k <b>${$("top_k").value}</b>`,
+    `max_new <b>${$("max_new_tokens").value}</b>`,
+    `ctx <b>${$("context").value}</b>`,
+    `rep <b>${$("repetition_penalty").value}</b>`,
+  ];
+  const s = sysLabel();
+  if (s) bits.push(`<span class="sys-bit">指令：${escapeHtml(s)}</span>`);
+  $("hyper").innerHTML = bits.join(" · ");
+}
+["temperature","top_p","top_k","max_new_tokens","context","repetition_penalty","system"]
+  .forEach(id => { $(id).addEventListener("input", renderHyper); $(id).addEventListener("change", renderHyper); });
+
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+async function health(){
+  try{
+    const r = await fetch(withToken(API + "/health"), {cache: "no-store"});
+    const j = await r.json();
+    modelInfo = { params: j.params, device: j.device, dtype: j.dtype, model: (j.model || "").split("/").pop() };
+    $("dot").className = "dot " + (j.generating ? "busy" : "ok");
+    const bits = [`已服务 ${j.served} 次`];
+    if (j.last_tok_per_s) bits.push(`${j.last_tok_per_s} tok/s`);
+    if (j.queue) bits.push(`排队 ${j.queue}`);
+    if (j.generating && j.generating_for_s) bits.push(`正在生成 ${j.generating_for_s}s`);
+    if (j.workers > 1) bits.push(`worker ${j.workers}`);
+    $("stat").textContent = bits.join(" · ");
+    renderHyper();
+  }catch(e){ $("dot").className = "dot"; $("stat").textContent = "服务不可达"; }
+}
+health(); setInterval(health, 5000);
+renderHyper();
+
+function addMsg(role, text){
+  log.querySelectorAll(".hint").forEach(h => h.remove());
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + role;
+  const who = document.createElement("div"); who.className = "who";
+  who.textContent = role === "user" ? "你" : "模型";
+  const body = document.createElement("div"); body.className = "body";
+  body.textContent = text || "";
+  wrap.append(who, body); log.appendChild(wrap);
+  log.scrollTop = log.scrollHeight;
+  return wrap;
+}
+
+/* ---- 助手消息渲染 ----
+   流式中且 <think> 未闭合 → 展开显示（"推理中…"）
+   <think> 已闭合            → 折叠（自动隐藏），点 summary 展开
+   结束时仍未闭合            → 黄色告警 + 自动展开（不隐藏）
+   没有 <think>              → 什么都不显示（只有正文）
+   重渲染时保留用户手动的 open 状态 */
+function renderAssistant(wrap, raw, opts){
+  opts = opts || {};
+  const body = wrap.querySelector(".body");
+  const old = body.querySelector("details.think");
+  const keepOpen = old ? old.open : null;
+
+  const i = raw.indexOf("<think>");
+  const j = i === -1 ? -1 : raw.indexOf("</think>", i);
+  body.innerHTML = "";
+
+  if (i === -1){
+    body.appendChild(document.createTextNode(raw));
+  } else {
+    const thinkTxt = j === -1 ? raw.slice(i + 7) : raw.slice(i + 7, j);
+    const rest = (raw.slice(0, i) + (j === -1 ? "" : raw.slice(j + 8))).trim();
+    const closed = j !== -1;
+
+    if (!closed && opts.streaming){
+      const box = document.createElement("div"); box.className = "thinkbox";
+      const lab = document.createElement("div"); lab.className = "tl";
+      lab.textContent = "推理中…（还没写出 </think>）";
+      const tx = document.createElement("div"); tx.className = "tx"; tx.textContent = thinkTxt;
+      box.append(lab, tx); body.appendChild(box);
+    } else if (!closed){
+      const d = document.createElement("details");
+      d.className = "think unclosed";
+      d.open = true;                                  // 未闭合 → 自动展开、不隐藏
+      const s = document.createElement("summary");
+      s.textContent = "⚠️ 推理未闭合（模型没输出 </think>，已替你展开）";
+      const tx = document.createElement("div"); tx.className = "tx"; tx.textContent = thinkTxt;
+      d.append(s, tx); body.appendChild(d);
+    } else {
+      const d = document.createElement("details"); d.className = "think";
+      d.open = keepOpen === true;                     // 默认折叠 = 自动隐藏；保留用户手动切换
+      const s = document.createElement("summary");
+      s.textContent = d.open ? "推理（已闭合，点击收起）" : "推理（已闭合，点击展开）";
+      d.addEventListener("toggle", () => {
+        s.textContent = d.open ? "推理（已闭合，点击收起）" : "推理（已闭合，点击展开）";
+      });
+      const tx = document.createElement("div"); tx.className = "tx"; tx.textContent = thinkTxt;
+      d.append(s, tx); body.appendChild(d);
+    }
+    if (rest) body.appendChild(document.createTextNode(rest));
+  }
+
+  // 底部统计行：与 play_v2.py 的输出格式对齐
+  let st = wrap.querySelector(".stats");
+  if (opts.stats){
+    if (!st){ st = document.createElement("div"); st.className = "stats"; wrap.appendChild(st); }
+    const s = opts.stats;
+    st.textContent = `[prompt ${s.prompt_tokens} tok · gen ${s.gen_tokens} tok · ${s.seconds}s · ${s.tok_per_s} tok/s]`;
+    const tag = (txt, warn) => { const sp = document.createElement("span"); if (warn) sp.className = "warn"; sp.textContent = " · " + txt; return sp; };
+    // 判据必须来自**文本里有没有未闭合的 <think>**，不能拿"是否命中回合边界"当 think 状态
+    // （第一版就是那么错的：没写 <think> 的正常回复也被标成"CoT 未闭合"）
+    const hasThink = raw.indexOf("<think>") !== -1;
+    const thinkOpen = hasThink && raw.indexOf("</think>") === -1;
+    if (thinkOpen) st.appendChild(tag("CoT 未闭合", true));
+    else if (hasThink) st.appendChild(tag("CoT 已闭合", false));
+    if (s.stop_reason === "turn") st.appendChild(tag("回合边界收尾", false));
+    else if (s.stop_reason === "eos") st.appendChild(tag("自然收尾", false));
+    else if (s.stop_reason === "max_tokens") st.appendChild(tag("截断（到上限）", true));
+  }
+  log.scrollTop = log.scrollHeight;
+}
+
+function autoGrow(){ input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 200) + "px"; }
+input.addEventListener("input", autoGrow);
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+});
+
+function setBusy(b){
+  busy = b;
+  $("btnSend").disabled = b; $("btnStop").disabled = !b;
+  $("tip").textContent = b ? "生成中…（点『停止』可中断）" : "";
+}
+
+async function send(){
+  const prompt = input.value.trim();
+  if (!prompt || busy) return;
+  input.value = ""; autoGrow();
+  addMsg("user", prompt);
+  const wrap = addMsg("assistant", "");
+  const body = wrap.querySelector(".body");
+  setBusy(true);
+
+  const payload = {
+    prompt, system: $("system").value.trim(), history: history.slice(-8),
+    context: +$("context").value,
+    temperature: +$("temperature").value, top_p: +$("top_p").value,
+    top_k: +$("top_k").value, max_new_tokens: +$("max_new_tokens").value,
+    repetition_penalty: +$("repetition_penalty").value,
+  };
+  controller = new AbortController();
+  let raw = "", running = true;
+  const t0 = performance.now();
+
+  try{
+    const res = await fetch(withToken(API + "/chat"), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload), signal: controller.signal,
+    });
+    if (!res.ok){
+      const j = await res.json().catch(() => ({}));
+      body.innerHTML = `<span class="err">请求被拒：${escapeHtml(j.error || res.status)}</span>`;
+      setBusy(false); return;
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    while (running){
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let k;
+      while ((k = buf.indexOf("\n\n")) !== -1){
+        const chunk = buf.slice(0, k); buf = buf.slice(k + 2);
+        if (!chunk.startsWith("data: ")) continue;
+        let ev; try { ev = JSON.parse(chunk.slice(6)); } catch (e) { continue; }
+        if (ev.type === "delta"){
+          raw += ev.text;
+          renderAssistant(wrap, raw, {streaming: true});
+        } else if (ev.type === "queue"){
+          body.innerHTML = `<span class="sys">${escapeHtml(ev.message)}</span>`;
+        } else if (ev.type === "done"){
+          // 服务端回传最终干净文本：流式期间可能已经吐出了跨 token 才匹配上的回合标记
+          // （实测：模型写 "\n用户：" 时先吐出"用户"，下一个 token 才匹配上，那句就撤不回了）
+          if (typeof ev.text === "string") raw = ev.text;
+          renderAssistant(wrap, raw, {streaming: false, stats: ev});
+          if (ev.reply_ids && ev.reply_ids.length){
+            history.push({user: prompt, reply_ids: ev.reply_ids});
+            if (history.length > 10) history.shift();
+          }
+          running = false;
+        } else if (ev.type === "error"){
+          body.innerHTML = `<span class="err">生成失败：${escapeHtml(ev.message)}</span>`;
+          running = false;
+        }
+      }
+    }
+  }catch(e){
+    if (e.name !== "AbortError") body.innerHTML = `<span class="err">连接中断：${escapeHtml(e.message)}</span>`;
+    else { renderAssistant(wrap, raw, {streaming: false}); $("tip").textContent = "已停止"; }
+  }finally{
+    setBusy(false); controller = null;
+    $("meta").textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s`;
+  }
+}
+$("btnSend").onclick = send;
+$("btnStop").onclick = () => { if (controller) controller.abort(); };
+</script>
+</body>
+</html>

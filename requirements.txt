@@ -1,0 +1,4 @@
+torch>=2.1
+datasets>=2.14
+tokenizers>=0.15
+numpy

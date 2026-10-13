@@ -1,0 +1,21 @@
+{
+  "name": "smoke_ref",
+  "model_dir": "checkpoints/retnet_272m_rp",
+  "data_dir": "data_cache/chat_pack_v13",
+  "output_dir": "checkpoints/_smoke_ref",
+  "precision": "bf16",
+  "mode": "chunkwise",
+  "chunk_size": 64,
+  "batch_size": 4,
+  "max_steps": 200,
+  "lr": 1.1e-4,
+  "min_lr": 1.1e-5,
+  "warmup": 5,
+  "save_steps": 100000,
+  "eval_steps": 100000,
+  "grad_checkpoint": true,
+  "compile": false,
+  "fast_chunkwise": false,
+  "seed": 1234,
+  "auto_restart_max": 0
+}
