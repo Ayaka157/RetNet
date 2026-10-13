@@ -39,16 +39,36 @@ LEGS = [
 ]
 
 
+def content_bbox(page, margin=3.0):
+    """图里真实内容的边界（文字块 + 绘制路径），用来裁掉原有白边。"""
+    rects = []
+    for b in page.get_text('blocks'):
+        rects.append(fitz.Rect(b[:4]))
+    for d in page.get_drawings():
+        rects.append(fitz.Rect(d['rect']))
+    if not rects:
+        return page.rect
+    r = rects[0]
+    for q in rects[1:]:
+        r |= q
+    r.x0 -= margin
+    r.y0 -= margin
+    r.x1 += margin
+    r.y1 += margin
+    return r & page.rect
+
+
 def titled(src_pdf, dst_pdf, title):
-    """在原图上方加一条标题带；内容仍为矢量（show_pdf_page 不栅格化）。"""
+    """裁掉原图白边、在上方加一条紧凑标题带；内容仍为矢量。"""
     src = fitz.open(src_pdf)
-    w, h = src[0].rect.width, src[0].rect.height
+    clip = content_bbox(src[0])
+    w, h = clip.width, clip.height
     out = fitz.open()
     page = out.new_page(width=w, height=h + BAND)
-    page.show_pdf_page(fitz.Rect(0, BAND, w, h + BAND), src, 0)
+    page.show_pdf_page(fitz.Rect(0, BAND, w, h + BAND), src, 0, clip=clip)
     page.draw_line(fitz.Point(0, BAND), fitz.Point(w, BAND),
                    color=(0.78, 0.78, 0.78), width=0.7)
-    page.insert_text(fitz.Point(0, BAND - 10), title, fontsize=10.5,
+    page.insert_text(fitz.Point(0, BAND - 8), title, fontsize=9.5,
                      fontname='helv', color=(0.12, 0.12, 0.12))
     out.save(dst_pdf)
     out.close()
