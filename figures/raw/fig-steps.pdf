@@ -1,0 +1,77 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 430 200] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2659 >>
+stream
+[] 0 d
+0.40 w 0.860 0.870 0.890 RG 58.00 54.00 m 396.00 54.00 l S
+BT 0.420 0.420 0.460 rg /F1 7.00 Tf 1 0 0 1 50.11 51.40 Tm (0) Tj ET
+[] 0 d
+0.40 w 0.860 0.870 0.890 RG 58.00 74.40 m 396.00 74.40 l S
+BT 0.420 0.420 0.460 rg /F1 7.00 Tf 1 0 0 1 42.32 71.80 Tm (500) Tj ET
+[] 0 d
+0.40 w 0.860 0.870 0.890 RG 58.00 94.80 m 396.00 94.80 l S
+BT 0.420 0.420 0.460 rg /F1 7.00 Tf 1 0 0 1 38.43 92.20 Tm (1000) Tj ET
+[] 0 d
+0.40 w 0.860 0.870 0.890 RG 58.00 115.20 m 396.00 115.20 l S
+BT 0.420 0.420 0.460 rg /F1 7.00 Tf 1 0 0 1 38.43 112.60 Tm (1500) Tj ET
+[] 0 d
+0.40 w 0.860 0.870 0.890 RG 58.00 135.60 m 396.00 135.60 l S
+BT 0.420 0.420 0.460 rg /F1 7.00 Tf 1 0 0 1 38.43 133.00 Tm (2000) Tj ET
+[] 0 d
+0.40 w 0.860 0.870 0.890 RG 58.00 156.00 m 396.00 156.00 l S
+BT 0.420 0.420 0.460 rg /F1 7.00 Tf 1 0 0 1 38.43 153.40 Tm (2500) Tj ET
+0.60 w 0.130 0.130 0.150 RG 58.00 54.00 338.00 102.00 re S
+BT 0.130 0.130 0.150 rg /F1 7.50 Tf -0.00000 1.00000 -1.00000 -0.00000 -24.64 105.00 Tm (ms per optimization step) Tj ET
+0.200 0.350 0.600 rg 76.59 54.00 47.32 88.78 re f
+BT 0.130 0.130 0.150 rg /F2 7.20 Tf 1 0 0 1 86.04 158.78 Tm (2176 ms) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.40 Tf 1 0 0 1 84.60 148.78 Tm (3,764 tok/s) Tj ET
+BT 0.130 0.130 0.150 rg /F2 7.60 Tf 1 0 0 1 97.51 42.00 Tm (A) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.40 Tf 1 0 0 1 86.73 34.00 Tm (reference) Tj ET
+0.200 0.350 0.600 rg 161.09 54.00 47.32 36.84 re f
+BT 0.130 0.130 0.150 rg /F2 7.20 Tf 1 0 0 1 172.54 106.84 Tm (903 ms) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.40 Tf 1 0 0 1 169.10 96.84 Tm (8,814 tok/s) Tj ET
+BT 0.130 0.130 0.150 rg /F2 7.60 Tf 1 0 0 1 182.01 42.00 Tm (B) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.40 Tf 1 0 0 1 171.86 34.00 Tm (+compile) Tj ET
+0.200 0.350 0.600 rg 245.59 54.00 47.32 29.09 re f
+BT 0.130 0.130 0.150 rg /F2 7.20 Tf 1 0 0 1 257.04 99.09 Tm (713 ms) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.40 Tf 1 0 0 1 251.82 89.09 Tm (11,496 tok/s) Tj ET
+BT 0.130 0.130 0.150 rg /F2 7.60 Tf 1 0 0 1 266.51 42.00 Tm (C) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.40 Tf 1 0 0 1 248.89 34.00 Tm (+8-bit AdamW) Tj ET
+0.240 0.500 0.350 rg 330.09 54.00 47.32 27.01 re f
+BT 0.130 0.130 0.150 rg /F2 7.20 Tf 1 0 0 1 341.54 97.01 Tm (662 ms) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.40 Tf 1 0 0 1 336.32 87.01 Tm (12,373 tok/s) Tj ET
+BT 0.130 0.130 0.150 rg /F2 7.60 Tf 1 0 0 1 350.10 42.00 Tm (C') Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.40 Tf 1 0 0 1 335.17 34.00 Tm (+closed-form) Tj ET
+BT 0.130 0.130 0.150 rg /F1 7.40 Tf 1 0 0 1 245.87 186.00 Tm (3.29x end to end, AC power, real Trainer path) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.80 Tf 1 0 0 1 273.53 174.00 Tm (measured 657 / 662 / 663 ms on repeats) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000002961 00000 n 
+0000003058 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+3160
+%%EOF

@@ -2,13 +2,38 @@
 
 Every figure here comes from a real artifact in this repository. Nothing is hand-drawn and
 nothing is interpolated. Each one ships as a vector PDF (open it in Illustrator or Inkscape if you
-want to edit) and as a PNG rendered at 4× (1720 px wide on the long edge).
+want to edit) and as a PNG rendered at 4× (1720 px wide on the long edge). Each PDF carries a title
+band naming the project and what the figure shows; `raw/` holds the untitled versions exactly as
+the technical report uses them.
 
 Regenerate with:
 
 ```bash
 python scripts/export_figures.py
 ```
+
+## Screenshots of the live UI
+
+`shots/` holds captures of the actual chat front end (`serve/index.html`) talking to the epoch-3
+model over the real SSE endpoint, taken with Chrome DevTools Protocol at 2× pixel density. They are
+cropped to the application, not to the screen.
+
+| File | Conversation |
+| --- | --- |
+| `shots/cv-roleplay-zhongli` | Persona: Zhongli (*Genshin Impact*). "钟离先生，给我讲讲璃月的故事吧。" — 114 tokens, closes on its own |
+| `shots/cv-roleplay-luxun` | Persona: Lu Xun. "先生，青年应当如何读书？" — 63 tokens, closes on its own |
+
+These were generated at temperature 0.6 with `repetition_penalty` 1.1 and `no_repeat_ngram_size` 4 —
+the decoding settings shown in each screenshot's hyper-parameter line. Generation is sampled, so a
+different run of the same prompt gives a different reply. Captures were discarded and regenerated
+when the reply (a) left its `<think>` block unclosed — the UI flags that with a warning banner,
+(b) came back shorter than 40 tokens, which reads as truncated, or (c) contradicted the prompt (one
+Doraemon run answered "能让我考砸道具的" to a question about doing *well* on an exam).
+
+The failure rate is not uniform. Prompts that ask the model to reason leak their `<think>` block
+most of the time — a machine-learning question leaked in 6 runs out of 6, at both 0.5 and 0.6 — while
+role-play prompts answered in character did not (6 out of 6 clean). That asymmetry is what the
+benchmark reports too: role-play and multi-turn score highest, reasoning and coding sit at zero.
 
 ## The 0.5B model
 
