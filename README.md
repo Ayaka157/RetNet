@@ -18,6 +18,7 @@ training legs, 1,656,209,408 tokens in total.
 | Weights (earlier legs) | [`RetNet-0.5B-ep1`](https://huggingface.co/Ayaka157/RetNet-0.5B-ep1) · [`RetNet-0.5B-ep2`](https://huggingface.co/Ayaka157/RetNet-0.5B-ep2) |
 | Weights (first chat model) | [`Ayaka157/RetNet-100M`](https://huggingface.co/Ayaka157/RetNet-100M) — 100,370,064 parameters, 2026-08-20 |
 | Technical report | [`docs/26_RetNet-0.5B_技术报告.md`](docs/26_RetNet-0.5B_技术报告.md) (Chinese) · [zh PDF](docs/latex/zh/RetNet-0.5B-技术报告.pdf) · [en PDF](docs/latex/en/RetNet-0.5B-Technical-Report.pdf) |
+| Figures | [`figures/`](figures/README.md) — every training curve as vector PDF + PNG + raw CSV |
 | Engineering log | [`docs/INDEX.md`](docs/INDEX.md) — 26 notes in Chinese, written while the work ran |
 | Operations | [`RUNBOOK.md`](RUNBOOK.md) |
 | Earlier Chinese README | [`README.zh-CN.md`](README.zh-CN.md), frozen at the 272M stage |

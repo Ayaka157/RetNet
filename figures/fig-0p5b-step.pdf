@@ -1,0 +1,51 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 430 168] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1290 >>
+stream
+0.60 w 0.130 0.130 0.150 RG 40.00 62.00 350.00 52.00 re S
+0.200 0.350 0.600 rg 40.00 62.00 215.77 52.00 re f
+BT 1.000 1.000 1.000 rg /F2 7.40 Tf 1 0 0 1 132.25 92.00 Tm (354.6 ms) Tj ET
+BT 1.000 1.000 1.000 rg /F1 6.80 Tf 1 0 0 1 138.25 81.00 Tm (61.6%) Tj ET
+0.800 0.520 0.200 rg 255.77 62.00 97.66 52.00 re f
+BT 1.000 1.000 1.000 rg /F2 7.40 Tf 1 0 0 1 288.97 92.00 Tm (160.5 ms) Tj ET
+BT 1.000 1.000 1.000 rg /F1 6.80 Tf 1 0 0 1 294.96 81.00 Tm (27.9%) Tj ET
+0.240 0.500 0.350 rg 353.43 62.00 29.51 52.00 re f
+BT 1.000 1.000 1.000 rg /F2 7.40 Tf 1 0 0 1 354.61 92.00 Tm (48.5 ms) Tj ET
+BT 1.000 1.000 1.000 rg /F1 6.80 Tf 1 0 0 1 360.44 81.00 Tm (8.4%) Tj ET
+0.620 0.640 0.670 rg 382.94 62.00 7.06 52.00 re f
+0.620 0.640 0.670 rg 40.00 44.00 7.00 7.00 re f
+BT 0.130 0.130 0.150 rg /F1 6.90 Tf 1 0 0 1 50.00 44.60 Tm (other \(clip, optimizer step\)  11.6 ms) Tj ET
+BT 0.130 0.130 0.150 rg /F2 7.80 Tf 1 0 0 1 40.00 148.00 Tm (575 ms steady-state optimization step) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.70 Tf 1 0 0 1 40.00 137.00 Tm (RTX PRO 6000, batch 16, seq 2048, chunk 128, bf16; SM occupancy 81-100%) Tj ET
+BT 0.420 0.420 0.460 rg /F1 6.70 Tf 1 0 0 1 40.00 126.00 Tm (GEMM and elementwise are measured by kernel name \(docs/25 SS3\); 22-24 ms \(3.8-4.3%\) is still recoverable) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001592 00000 n 
+0000001689 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1791
+%%EOF
