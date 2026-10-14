@@ -52,7 +52,7 @@ Start-Process $py -ArgumentList @("serve\retnet_play_server.py","--model_dir","c
   -RedirectStandardOutput "E:\Workspaces\RetNet\logs\serve.out" -RedirectStandardError "E:\Workspaces\RetNet\logs\serve.err" -WindowStyle Hidden
 
 # 连接器（token 走环境变量，不进命令行、不进日志）
-$env:TUNNEL_TOKEN = (Get-Content "%TUNNEL_TOKEN_FILE%" -Raw).Trim()
+$env:TUNNEL_TOKEN = (Get-Content "<token 文件路径>" -Raw).Trim()
 Start-Process "cloudflared" -ArgumentList @("tunnel","--no-autoupdate","run") `
   -WorkingDirectory "E:\Workspaces\RetNet" -RedirectStandardOutput "E:\Workspaces\RetNet\logs\tunnel-llm.out" `
   -RedirectStandardError "E:\Workspaces\RetNet\logs\tunnel-llm.err" -WindowStyle Hidden
@@ -82,8 +82,8 @@ Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" |
 | 隧道名 | `retnet-demo-tunnel` |
 | 隧道 ID | `TUNNEL_ID_REDACTED` |
 | 类型 | 远程托管（token 模式，路由在 Cloudflare 后台） |
-| token 文件 | `%TUNNEL_TOKEN_FILE%`（184 字符，单段 base64） |
-| Public Hostname | `your-demo-host.example` → **HTTP** → `127.0.0.1:8077`（Path 留空） |
+| token 文件 | 由 `-TunnelTokenFile` 指定（默认见 `start_play.ps1` 的 `param` 块）；184 字符，单段 base64 |
+| Public Hostname | 由 `-PublicHost` 指定 → **HTTP** → `127.0.0.1:8077`（Path 留空） |
 | 连接器 | 本机普通进程 `cloudflared tunnel --no-autoupdate run`（4 条边缘连接：mfm01×2 / hkg12 / hkg13） |
 | DNS | Cloudflare 自动建的 CNAME，proxied → 172.67.160.56 / 104.21.90.193 |
 
@@ -114,9 +114,9 @@ Subdomain `retnet` + Domain `<redacted-host>` + **Path 留空** + Service **HTTP
 * **三道闸**：每 IP 最小间隔、排队上限（满则 503）、单次 `max_new_tokens ≤ 512`，全部服务端夹紧。
 * **多用户隔离**：服务端**无会话状态**，多轮上下文由前端回传**回复的 token id**（不是文本：
   词表里 `<`、`>`、`/` 是独立特殊 token，`encode(decode(ids)) != ids`）。
-* **凭据纪律（重要）**：本项目**只读用户明确指定的凭据文件**（当前为 `%TUNNEL_TOKEN_FILE%`）。
+* **凭据纪律（重要）**：本项目**只读用户明确指定的凭据文件**（路径由 `-TunnelTokenFile` 给出）。
   不读剪贴板、不读环境变量、不翻会话归档。token 只经环境变量传给 cloudflared，不进命令行、不进日志、不打印明文（只打掩码）。
-* **想加登录门槛**：Cloudflare Zero Trust → Access → Applications，给 `your-demo-host.example` 加策略（邮箱/一次性 PIN）。
+* **想加登录门槛**：Cloudflare Zero Trust → Access → Applications，给 `-PublicHost` 那个域名加策略（邮箱/一次性 PIN）。
   免费额度对小圈子够用。不想开 Zero Trust 就用 `--token` 口令 + 分享链接 `…/play/?t=…`。
 
 ## 6. 已踩过的坑（都实测过）
@@ -129,6 +129,8 @@ Subdomain `retnet` + Domain `<redacted-host>` + **Path 留空** + Service **HTTP
 | `AttributeError: 'NoneType' object has no attribute 'root_path'` | 路由装饰器在 import 时执行，而 `--root_path` 要等 argparse | 路由挂内层 app，`main()` 里 `app.mount(root_path, api)` |
 | 用 3 段 JWT 的正则解析隧道 token 失败 | **Cloudflare 隧道 token 是单段 base64**（`{"a":…,"t":…,"s":…}`），不是三段 JWT | 解析时按单段 base64 处理 |
 | `Set-Content … "ey..."` 写进文件却没生效 | 占位符被当成字面量；且当时目录/环境不对 | 用记事本保存或 `Get-Clipboard \| Set-Content`；核对长度应为 ~184 字符 |
+| 脚本报 `⚠️ 找不到 cloudflared，跳过连接器`，但 `cloudflared` 明明在 PATH 里 | 脚本把可执行文件名写成裸 `cloudflared` 然后 `Test-Path` —— **`Test-Path` 不查 PATH**，只按相对当前目录解析，必然判否 | 先用 `Get-Command` 走 PATH 拿回 `.Source` 绝对路径，再做存在性判断（`start_play.ps1` 里已按此实现） |
+| 一处发布前脱敏把 `C:\Tools\secrets\...` 换成 `%TUNNEL_TOKEN_FILE%` 字面量，脚本静默读不到 token | 占位符只在 md 里是人话，在 PowerShell 里就是普通字符串 | 脚本里的路径一律走参数/默认值，不用 `%VAR%` 这种写法 |
 
 ## 7. 验证记录（2026-10-13）
 

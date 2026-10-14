@@ -12,7 +12,10 @@ RetNet 试玩服务 · 一键启停（后端 + Cloudflare 连接器 + 可选临�
   .\serve\start_play.ps1 -Token "口令"     # 开分享口令
 
 可选：-Port 8077  -Model checkpoints/retnet_500m_v15b_ep3  -Dtype bf16  -RootPath /play  -Workers 1
-      -TunnelTokenFile %TUNNEL_TOKEN_FILE%  -PublicHost your-demo-host.example
+      -TunnelTokenFile <路径>  -PublicHost <域名>
+
+cloudflared 走 PATH 查找（`Get-Command`），拿不到就退到当前目录里的同名文件。
+`-PublicHost` 只用于打印对外地址，留空则不打印（隧道本身照常工作，路由在 Cloudflare 后台配）。
 
 ## 意外终止怎么收尾（这是本脚本的重点）
 
@@ -36,8 +39,8 @@ param(
   [string]$RootPath = "/play",
   [string]$Token = "",
   [int]$Workers = 1,
-  [string]$TunnelTokenFile = "%TUNNEL_TOKEN_FILE%",
-  [string]$PublicHost = "your-demo-host.example",
+  [string]$TunnelTokenFile = "C:\Tools\secrets\cf-tunnel-token.txt",
+  [string]$PublicHost = "",
   [switch]$Stop,
   [switch]$Status,
   [switch]$Clean,
@@ -60,8 +63,16 @@ $qtErr   = Join-Path $logDir "quicktunnel.err"
 $supLog  = Join-Path $logDir "supervisor.out"
 $stateF  = Join-Path $logDir "play_state.json"
 $supPath = Join-Path $root "serve\_play_supervisor.ps1"
-$cfExe   = "cloudflared"
 $srvPath = Join-Path $root "serve\retnet_play_server.py"
+
+# cloudflared 解析成**绝对路径**。
+# ⚠️ 不能只写 "cloudflared" 然后 Test-Path：Test-Path 不查 PATH，只按相对当前目录解析，
+#    必然判否（这个坑踩过一次：脚本报"找不到 cloudflared"而它其实就在 C:\Tools 下）。
+#    Get-Command 才走 PATH，拿回 .Source 之后后面的 Test-Path 才有意义。
+$cfExe = "cloudflared"
+$cfCmd = Get-Command $cfExe -ErrorAction SilentlyContinue
+if ($cfCmd) { $cfExe = $cfCmd.Source }
+
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 # ------------------------------------------------------------------ 小工具
@@ -171,7 +182,8 @@ if ($Status) {
       if ($v -gt 0) { if (Alive $v) { $mark = 'alive' } else { $mark = 'DEAD' } }
       Write-Host ("    {0,-11} {1,-7} {2}" -f $k, $v, $mark)
     }
-    Write-Host ("  端口 {0} / 路径 {1} / 公网 https://{2}{1}/" -f $st.port, $st.rootPath, $st.publicHost)
+    $ph = if ($st.publicHost) { "公网 https://{0}{1}/" -f $st.publicHost, $st.rootPath } else { "公网 （未设 -PublicHost）" }
+    Write-Host ("  端口 {0} / 路径 {1} / {2}" -f $st.port, $st.rootPath, $ph)
   } else {
     Write-Host "  没有状态文件（服务可能没起，或上次被硬杀后没清理）"
   }
@@ -280,8 +292,12 @@ if (-not $NoTunnel) {
       Write-Host ("   连接器 pid {0}（隧道 id {1}）{2}" -f $connectorId, $info.TunnelId, $(if ($okc) { '已注册' } else { '⚠️ 未见注册成功' }))
       if ($okc) {
         Write-Host ""
-        Write-Host ("🌐 公网地址：https://{0}{1}/" -f $PublicHost, $RootPath) -ForegroundColor Cyan
-        if ($Token) { Write-Host ("   （带口令： https://{0}{1}/?t={2}）" -f $PublicHost, $RootPath, $Token) }
+        if ($PublicHost) {
+          Write-Host ("🌐 公网地址：https://{0}{1}/" -f $PublicHost, $RootPath) -ForegroundColor Cyan
+          if ($Token) { Write-Host ("   （带口令： https://{0}{1}/?t={2}）" -f $PublicHost, $RootPath, $Token) }
+        } else {
+          Write-Host "🌐 连接器已注册；对外地址由 Cloudflare 后台的 Public Hostname 决定（本脚本未设 -PublicHost）" -ForegroundColor Cyan
+        }
       }
     }
   }
