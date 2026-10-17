@@ -1,7 +1,7 @@
 # 一键把 AutoDL 实例配成免密（之后 AI 助手和我都能直接用 `ssh gpu-host`，无需密码）。
 #
-#   pwsh -NoProfile -File scripts\linux\setup_gpu-host_ssh.ps1 `
-#        -SshHost <gpu-host> -Port 12345
+#   pwsh -NoProfile -File scripts\linux\setup_autodl_ssh.ps1 `
+#        -SshHost <主机名> -Port 12345
 #
 # 你只需要做两件事：
 #   1) 把 AutoDL 实例页那行「ssh -p 12345 root@<gpu-host>」里的
@@ -104,7 +104,7 @@ if ($start -ge 0) {
 }
 $block = @(
     '',
-    '# AutoDL 实例（由 scripts\linux\setup_gpu-host_ssh.ps1 写入/更新）',
+    '# AutoDL 实例（由 scripts\linux\setup_autodl_ssh.ps1 写入/更新）',
     "Host $Alias",
     "    HostName $SshHost",
     "    Port $Port",
