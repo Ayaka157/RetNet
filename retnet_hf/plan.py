@@ -69,6 +69,10 @@ class Stage:
     data_dir: str
     steps: int
     mode: str = "auto"          # auto / packed / flat
+    gc: bool = False            # 本段消费完后回收其数据文件（防炸盘）
+    min_shards: int | None = None   # flat 段至少要有这么多分片才算就绪
+    exclude: list[str] = field(default_factory=list)  # 跳过的文件名前缀（如 ["skypile_"]）
+    weight: float | None = None
 
     def resolved_dir(self) -> Path:
         p = Path(self.data_dir)
@@ -89,6 +93,7 @@ class Plan:
     source: Path | None = None
     raw: dict = field(default_factory=dict)
     val_dir: str = ""
+    min_free_gb: float = 8.0      # 数据盘剩余低于此值时告警（防炸盘）
 
     def resolved_val_dir(self) -> Path:
         """验证集目录：优先 ``val_dir``，否则用第一段的目录。
@@ -155,6 +160,10 @@ def parse_plan(data: dict, source: Path | None = None) -> Plan:
             data_dir=str(_need(s, "data_dir", f"{where}:stages[{i}]")),
             steps=steps,
             mode=str(s.get("mode", "auto")),
+            gc=bool(s.get("gc", False)),
+            min_shards=(int(s["min_shards"]) if s.get("min_shards") is not None else None),
+            exclude=[str(x) for x in (s.get("exclude") or [])],
+            weight=s.get("weight"),
         ))
     lr = data.get("lr", {}) or {}
     plan = Plan(
@@ -170,6 +179,7 @@ def parse_plan(data: dict, source: Path | None = None) -> Plan:
         source=source,
         raw=data,
         val_dir=str(data.get("val_dir", "")),
+        min_free_gb=float(data.get("min_free_gb", 8.0)),
     )
     if plan.lr_min > plan.lr_peak:
         raise ValueError(f"计划文件 {where}：lr.min 大于 lr.peak")
@@ -257,6 +267,8 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
             self._stage_logged = None
             self._steps_since_check = 0
             self._check_every = max(1, int(check_every))
+            self._wait_logged = False      # 「目标数据未就绪」只打印一次，别刷屏
+            self._disk_warned = False      # 磁盘告警同理
             # 显式绑定：不同 transformers 版本给 callback 的 kw 不一样，
             # 实测 4.57 里 on_step_end 的 kw 并**不**保证带 trainer，
             # 靠 kw.get("trainer") 会让换料静默失效。由 train.py 直接 bind。
@@ -310,21 +322,71 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
                 self._log(f"[plan] eval_steps -> {args.eval_steps}")
 
         def _sync_stage(self, trainer, state, force: bool = False) -> None:
+            """把数据集切到计划要求的阶段。
+
+            **数据没就绪时不崩也不前进**：继续用当前阶段，每 ``_check_every`` 步
+            重试。这是「训练中同时上传下一轮数据」能成立的前提——数据传完了，
+            下一次检查自然就切过去。
+            """
             ds = self._dataset(trainer)
             if ds is None or self.plan is None:
                 return
             want = self.plan.stage_index_at(state.global_step)
             have = getattr(ds, "active_index", 0)
-            if force or want != have:
-                ds.set_stage(want)
-                name = self.plan.stages[want].name
-                if self._stage_logged != name:
+            if not force and want == have:
+                self._wait_logged = False
+                return
+
+            target = self.plan.stages[want]
+            ok, why = ds.stage_ready(want)
+            if not ok:
+                if not self._wait_logged:
                     self._log(
-                        f"[plan] step {state.global_step} 切到第 {want} 段语料 "
-                        f"「{name}」（{self.plan.stages[want].data_dir}，"
-                        f"预算 {self.plan.stages[want].steps} 步）"
+                        f"[plan] step {state.global_step} 目标阶段 {want}"
+                        f"「{target.name}」尚未就绪（{why}）—— 继续用当前阶段"
+                        f"「{ds.active_name}」，每 {self._check_every} 步重试一次"
                     )
-                    self._stage_logged = name
+                    self._wait_logged = True
+                return
+
+            # 离开旧段：按计划回收它的数据目录（已消费完，留着只占盘）
+            if not force and 0 <= have < len(self.plan.stages):
+                prev = self.plan.stages[have]
+                if prev.gc:
+                    try:
+                        ds.gc_stage(have)
+                    except Exception as exc:                    # noqa: BLE001
+                        self._log(f"[plan] 回收阶段 {have} 失败: {type(exc).__name__}: {exc}")
+
+            ds.set_stage(want)
+            self._wait_logged = False
+            name = target.name
+            if self._stage_logged != name:
+                self._log(
+                    f"[plan] step {state.global_step} 切到第 {want} 段语料 "
+                    f"「{name}」（{target.data_dir}，预算 {target.steps} 步，"
+                    f"gc={target.gc}）"
+                )
+                self._stage_logged = name
+
+        def _check_disk(self, state) -> None:
+            """数据盘剩余低于计划阈值就告警（只告警，不擅自杀训练）。"""
+            if self.plan is None:
+                return
+            try:
+                import shutil
+                free_gb = shutil.disk_usage(str(ROOT)).free / 1e9
+            except Exception:                                   # noqa: BLE001
+                return
+            if free_gb < self.plan.min_free_gb:
+                if not self._disk_warned:
+                    self._log(
+                        f"[plan] ⚠️ step {state.global_step} 磁盘剩余 {free_gb:.1f} GB "
+                        f"< 阈值 {self.plan.min_free_gb:.1f} GB —— 考虑把已消费阶段的 gc 打开"
+                    )
+                    self._disk_warned = True
+            else:
+                self._disk_warned = False
 
         def _set_lr(self, trainer, state) -> None:
             if self.plan is None:
@@ -371,6 +433,15 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
             self._steps_since_check += 1
             if self._steps_since_check >= self._check_every:
                 self._steps_since_check = 0
+                # 周期性地重扫「当前阶段」的目录：数据可能是边训边传的，
+                # 新到的分片要在这一轮里就被吃进去，而不是等下一段。
+                ds = self._dataset(trainer)
+                if ds is not None:
+                    try:
+                        ds.refresh_stage(getattr(ds, "active_index", 0))
+                    except Exception as exc:                    # noqa: BLE001
+                        self._log(f"[plan] 刷新当前阶段失败: {type(exc).__name__}: {exc}")
+                self._check_disk(state)
             return control
 
         def _apply_plan_change(self, trainer, args, state) -> None:
@@ -396,7 +467,9 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
                 ds = self._dataset(trainer)
                 if ds is not None:
                     ds.update_stages([{"name": s.name, "data_dir": str(s.resolved_dir()),
-                                       "mode": s.mode} for s in new.stages])
+                                       "mode": s.mode, "gc": s.gc,
+                                       "min_shards": s.min_shards,
+                                       "exclude": s.exclude} for s in new.stages])
                     self._log(f"[plan] 语料阶段已更新为 {len(new.stages)} 段")
                     self._stage_logged = None
             self._apply_intervals(args)

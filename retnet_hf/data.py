@@ -69,6 +69,13 @@ class _PackedStage:
     def __len__(self):
         return self.ids.shape[0]
 
+    def files(self) -> list[Path]:
+        """本阶段占用的磁盘文件（供 GC 删除）。"""
+        out = [self.data_dir / "train.ids.npy"]
+        if self.codes is not None:
+            out.append(self.data_dir / "train.wcode.npy")
+        return [p for p in out if p.exists()]
+
     def row(self, idx):
         row = self.ids[idx]
         if self.codes is not None:
@@ -86,33 +93,80 @@ class _FlatStage:
     不必先花几小时生成一份 5 GB 的重复文件。
     """
 
-    def __init__(self, name, data_dir, seq_len, weight=1):
+    def __init__(self, name, data_dir, seq_len, weight=1, exclude=None):
         self.name = name
         self.data_dir = Path(data_dir)
         self.seq_len = seq_len
         self.weight = int(weight)
-        width = seq_len + 1
-        # 排除验证集分片（形如 wikipedia_zh_val.npy）
-        files = sorted(p for p in self.data_dir.glob("*.npy") if "val" not in p.name.lower())
-        if not files:
-            raise FileNotFoundError(f"阶段「{name}」在 {self.data_dir} 下没有可用的 *.npy")
+        #: 要跳过的文件名前缀，例如 ["skypile_"] 表示不用该来源（license 原因等）
+        self.exclude = tuple(str(x) for x in (exclude or ()))
         self.shards = []
         self._starts = []
-        total = 0
+        self._rows = 0
+        shards, starts, total = self._scan()
+        if total == 0:
+            raise FileNotFoundError(
+                f"阶段「{name}」在 {self.data_dir} 下没有可用的 *.npy（或文件都还没写完）")
+        self.shards, self._starts, self._rows = shards, starts, total
+        self._wc = np.full(seq_len, self.weight, dtype=np.int64)
+
+    def _scan(self):
+        """扫描目录，返回 (shards, starts, rows)。
+
+        **跳过打不开的分片**：数据可能正在从外面传进来，文件被截断时
+        ``np.load(mmap_mode=...)`` 会抛 ``ValueError: mmap length is greater than
+        file size``。这里选择跳过而不是崩——下一轮 ``refresh()`` 会把它收进来。
+        """
+        width = self.seq_len + 1
+        files = sorted(p for p in self.data_dir.glob("*.npy") if "val" not in p.name.lower())
+        if self.exclude:
+            files = [p for p in files if not p.name.startswith(self.exclude)]
+        shards, starts, total = [], [], 0
         for p in files:
-            arr = np.load(p, mmap_mode="r")
+            try:
+                arr = np.load(p, mmap_mode="r")
+            except Exception:                                   # noqa: BLE001
+                continue          # 正在写入 / 损坏，等下次 refresh
             if arr.ndim != 1:
-                raise ValueError(f"{p} 是 {arr.ndim} 维，flat 模式要求一维 token 流")
+                continue
             n = arr.shape[0] // width
             if n == 0:
                 continue
-            self.shards.append((p, arr, n))
-            self._starts.append(total)
+            shards.append((p, arr, n))
+            starts.append(total)
             total += n
-        if total == 0:
-            raise ValueError(f"阶段「{name}」的分片长度都不足一行（{width} token）")
-        self._rows = total
-        self._wc = np.full(seq_len, self.weight, dtype=np.int64)
+        return shards, starts, total
+
+    @property
+    def shard_count(self) -> int:
+        return len(self.shards)
+
+    def refresh(self) -> bool:
+        """重新扫描目录；有新分片就接过，返回是否发生变化。"""
+        shards, starts, total = self._scan()
+        if len(shards) == len(self.shards) and total == self._rows:
+            return False
+        self.shards, self._starts, self._rows = shards, starts, total
+        return True
+
+    def files(self) -> list[Path]:
+        """本阶段占用的磁盘文件（供 GC 删除）。"""
+        return [p for p, _a, _n in self.shards]
+
+    def close(self) -> None:
+        """释放 mmap 句柄。
+
+        ⚠️ 删除文件前必须调：Windows 上 mmap 会占用文件句柄，不先关就
+        ``unlink`` 会报 WinError 32（Linux 上能删，但显式关闭更干净）。
+        """
+        for _p, arr, _n in self.shards:
+            try:
+                mm = getattr(arr, "_mmap", None)
+                if mm is not None:
+                    mm.close()
+            except Exception:                                   # noqa: BLE001
+                pass
+        self.shards, self._starts, self._rows = [], [], 0
 
     def __len__(self):
         return self._rows
@@ -157,6 +211,9 @@ class StagePackedDataset(Dataset):
                 "data_dir": str(s["data_dir"]),
                 "mode": str(s.get("mode", "auto")),
                 "weight": s.get("weight"),
+                "gc": bool(s.get("gc", False)),
+                "min_shards": s.get("min_shards"),
+                "exclude": list(s.get("exclude") or []),
             })
         # 按 (name, data_dir) 复用已打开的阶段，避免热更新时重复 mmap
         reuse = {}
@@ -181,7 +238,8 @@ class StagePackedDataset(Dataset):
             if mode == "packed":
                 st = _PackedStage(sp["name"], sp["data_dir"], self._seq_len, sp.get("weight"))
             elif mode == "flat":
-                st = _FlatStage(sp["name"], sp["data_dir"], self._seq_len)
+                st = _FlatStage(sp["name"], sp["data_dir"], self._seq_len,
+                                exclude=sp.get("exclude"))
             else:
                 raise ValueError(f"未知的 stage mode {mode!r}（阶段「{sp['name']}」）")
             self._cache[i] = st
@@ -195,9 +253,82 @@ class StagePackedDataset(Dataset):
         self._stage(i)                     # 提前打开，失败就在这里响亮报错
         self._active = int(i)
 
+    # -- 就绪性 / 刷新 / 回收（训练中「边传边用」的基础）---------------
+    def stage_ready(self, i: int) -> tuple[bool, str]:
+        """该阶段现在能不能打开。不抛异常，供计划回调决定「等还是切」。
+
+        这是「训练中上传下一轮数据」的关键：数据没传完时返回 (False, 原因)，
+        回调继续用当前阶段，每 N 步重试一次，传完了自然就切过去。
+        """
+        if not (0 <= i < len(self._specs)):
+            return False, f"stage {i} 越界"
+        try:
+            st = self._stage(i)
+        except Exception as exc:                                # noqa: BLE001
+            return False, f"{type(exc).__name__}: {exc}"
+        min_shards = self._specs[i].get("min_shards")
+        if min_shards and hasattr(st, "shard_count") and st.shard_count < int(min_shards):
+            return False, f"分片数 {st.shard_count} < 要求 {min_shards}"
+        return True, f"rows={len(st)}"
+
+    def refresh_stage(self, i: int) -> bool:
+        """重新扫描该阶段目录，接过新到的分片。返回是否有变化。"""
+        st = self._cache.get(i)
+        if st is None:
+            return False
+        if not hasattr(st, "refresh"):
+            return False
+        if st.refresh():
+            print(f"[stage] 阶段 {i}「{self._specs[i]['name']}」刷新："
+                  f"{len(st)} 行 / {getattr(st, 'shard_count', '?')} 分片", flush=True)
+            return True
+        return False
+
+    def gc_stage(self, i: int) -> int:
+        """删除第 i 段的**数据文件**（已消费完才调）。返回释放字节数。
+
+        安全约束（宁可少删也不能删错）：
+        1. 只删本阶段自己登记的文件，不 rm -rf 整个目录；
+        2. 该目录若被别的阶段引用，跳过；
+        3. 该目录若是验证集目录，跳过。
+        """
+        if not (0 <= i < len(self._specs)):
+            return 0
+        sp = self._specs[i]
+        d = Path(sp["data_dir"]).resolve()
+        for j, other in enumerate(self._specs):
+            if j != i and Path(other["data_dir"]).resolve() == d:
+                print(f"[gc] 跳过阶段 {i}「{sp['name']}」：目录与阶段 {j} 相同", flush=True)
+                return 0
+        st = self._cache.get(i)
+        if st is None or not hasattr(st, "files"):
+            return 0
+        targets = st.files()
+        if hasattr(st, "close"):
+            st.close()                 # 先松 mmap 句柄，否则 Windows 删不掉
+        freed = 0
+        for p in targets:
+            try:
+                sz = p.stat().st_size
+                p.unlink()
+                freed += sz
+            except FileNotFoundError:
+                pass
+            except Exception as exc:                            # noqa: BLE001
+                print(f"[gc] 删除 {p} 失败: {exc}", flush=True)
+        self._cache.pop(i, None)
+        print(f"[gc] 阶段 {i}「{sp['name']}」已回收 {freed / 1e9:.2f} GB 磁盘"
+              f"（{d}）", flush=True)
+        return freed
+
     @property
     def active_index(self) -> int:
         return self._active
+
+    def files(self) -> list[Path]:
+        """当前阶段占用的磁盘文件（诊断用；GC 走 gc_stage）。"""
+        st = self._cache.get(self._active)
+        return st.files() if st is not None and hasattr(st, "files") else []
 
     @property
     def active_name(self) -> str:

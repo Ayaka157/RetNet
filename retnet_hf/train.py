@@ -265,7 +265,8 @@ def main():
     if plan_obj is not None:
         seq_len = plan_obj.seq_len
         train_ds = StagePackedDataset(
-            [{"name": s.name, "data_dir": str(s.resolved_dir()), "mode": s.mode}
+            [{"name": s.name, "data_dir": str(s.resolved_dir()), "mode": s.mode,
+              "gc": s.gc, "min_shards": s.min_shards, "exclude": s.exclude}
              for s in plan_obj.stages], seq_len)
         print(f"seq_len={seq_len}（来自计划）", flush=True)
         args.max_steps = plan_obj.total_steps
