@@ -1,0 +1,56 @@
+{
+  "_readme": [
+    "训练计划（可热加载）。训练进程每隔 ~200 步比对一次本文件的 mtime，",
+    "发现变化就在下一个优化步边界生效，**不需要杀掉训练**。",
+    "",
+    "规则：",
+    "  1. total_steps = sum(stages[].steps)，余弦铺满整个 total_steps。",
+    "     改 steps 或追加一段 -> 总步数变长 -> 余弦自动拉长；",
+    "     代价是当前 LR 会按新曲线跳上去（受控热重启，优化器状态不丢），",
+    "     回调会打印『旧 LR -> 新 LR』，不偷偷来。",
+    "  2. 跑到当前段的步数预算用尽 -> 自动切下一段的语料，进程不退出、",
+    "     DataLoader 不重建、优化器状态不丢。",
+    "  3. val_dir 不随手改：换训练语料时验证集必须固定，否则曲线前后不可比。",
+    "",
+    "用 flat 模式（不打包）的语料目录：里面放一维 token 流 *.npy 即可，",
+    "data_cache/pretrain_v2 就是这种。行数 = 总token // (seq_len+1)。",
+    "",
+    "把下面 stages 的 steps 按你的余额改大/改小即可；改完存盘就生效。"
+  ],
+  "plan_version": 1,
+  "seq_len": 2048,
+
+  "stages": [
+    {
+      "name": "fineweb_zh",
+      "data_dir": "data_cache/pretrain_v2",
+      "steps": 55000,
+      "_note": "中文 FineWeb-Edu + 中文维基，2.82B token，模型完全没见过。flat 模式直接读分片，不打包不复制"
+    },
+    {
+      "name": "pretrain_merged",
+      "data_dir": "data_cache/pretrain_merged",
+      "mode": "flat",
+      "steps": 0,
+      "_note": "1.31B token 的合并预训练流。默认 0 步（不用）；要接上就把 steps 改大——热加载会立刻把总步数拉长。注意它的文件名虽然叫 train.ids.npy，但一维流，必须显式 mode=flat"
+    },
+    {
+      "name": "chat_anneal",
+      "data_dir": "data_cache/chat_pack_v13",
+      "steps": 6000,
+      "_note": "最后回到对话语料退火，保证 demo 的对话能力不退化"
+    }
+  ],
+
+  "lr": {
+    "peak": 1.1e-4,
+    "min": 1.1e-5,
+    "warmup": 500
+  },
+
+  "save_steps": 2400,
+  "eval_steps": 2400,
+
+  "val_dir": "data_cache/chat_pack_v13",
+  "notes": "v20 计划：先用 55k 步吃新语料（1.80B token），再用 6k 步对话退火。合计 61k 步 ≈ 9.7h ≈ ¥68。"
+}

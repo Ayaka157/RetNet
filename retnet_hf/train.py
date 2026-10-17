@@ -22,7 +22,12 @@ from transformers import TrainingArguments, Trainer
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from retnet_hf import RetNetForCausalLM, PackedChatDataset, ChatDataCollator  # noqa: E402
+from retnet_hf import (  # noqa: E402
+    ChatDataCollator,
+    PackedChatDataset,
+    RetNetForCausalLM,
+    StagePackedDataset,
+)
 from retnet_hf.modeling_retnet import RetNetHFConfig  # noqa: E402
 
 
@@ -165,7 +170,12 @@ def main():
             pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_dir", required=True, help="migrated HF checkpoint dir")
-    ap.add_argument("--data_dir", required=True, help="packed chat data dir")
+    ap.add_argument("--data_dir", default=None,
+                    help="packed chat data dir；用 --plan 时可不传")
+    ap.add_argument("--plan", default=None,
+                    help="可热加载的训练计划 JSON（见 retnet_hf/plan.py）。"
+                         "传了它就用计划里的 stages 当数据源、total_steps 当 max_steps，"
+                         "并在训练中途按文件变更实时调整（换语料/加步数/改 LR）")
     ap.add_argument("--output_dir", required=True)
     ap.add_argument("--max_steps", type=int, default=45000)
     ap.add_argument("--batch_size", type=int, default=10)
@@ -224,7 +234,20 @@ def main():
     args = ap.parse_args()
 
     model_dir = Path(args.model_dir)
-    data_dir = Path(args.data_dir)
+    plan_obj = None
+    if args.plan:
+        from retnet_hf.plan import PlanWatcher
+        plan_obj = PlanWatcher(args.plan, verbose=False).load(force=True)
+        print(f"[plan] 载入 {args.plan}：{len(plan_obj.stages)} 段，"
+              f"合计 {plan_obj.total_steps} 步，seq_len={plan_obj.seq_len}", flush=True)
+        for _i, _s in enumerate(plan_obj.stages):
+            print(f"[plan]   段 {_i}: {_s.name} -> {_s.data_dir} ({_s.steps} 步)", flush=True)
+    data_dir = Path(args.data_dir) if args.data_dir else None
+    if data_dir is None and plan_obj is None:
+        raise SystemExit("必须给 --data_dir，或用 --plan 指定训练计划")
+    if data_dir is None:
+        # 计划模式下 data_dir 只为兼容旧代码路径；用第一段
+        data_dir = plan_obj.stages[0].resolved_dir()
 
     model = RetNetForCausalLM.from_pretrained(str(model_dir))
     model.config.mode = args.mode
@@ -237,19 +260,29 @@ def main():
     n_params = sum(p.numel() for p in model.parameters())
     print(f"loaded model from {model_dir} (params={n_params / 1e6:.2f}M)", flush=True)
 
-    # packed rows are seq_len+1 wide
-    seq_len = int(Path(data_dir / "train.ids.npy").stat().st_size /
-                  (438647 * 2)) if False else None  # placeholder
+    # ---- 数据集：计划模式走多阶段可切换数据集，否则走原来的单文件 ----
     import numpy as np
-    probe = np.load(data_dir / "train.ids.npy", mmap_mode="r")
-    seq_len = probe.shape[1] - 1
-    del probe
-    print(f"seq_len={seq_len}", flush=True)
-
-    train_ds = PackedChatDataset(str(data_dir / "train.ids.npy"),
-                                 str(data_dir / "train.wcode.npy"), seq_len)
-    val_ds = PackedChatDataset(str(data_dir / "val.ids.npy"),
-                               str(data_dir / "val.wcode.npy"), seq_len)
+    if plan_obj is not None:
+        seq_len = plan_obj.seq_len
+        train_ds = StagePackedDataset(
+            [{"name": s.name, "data_dir": str(s.resolved_dir()), "mode": s.mode}
+             for s in plan_obj.stages], seq_len)
+        print(f"seq_len={seq_len}（来自计划）", flush=True)
+        args.max_steps = plan_obj.total_steps
+        print(f"[plan] max_steps 由计划决定：{args.max_steps}", flush=True)
+    else:
+        probe = np.load(data_dir / "train.ids.npy", mmap_mode="r")
+        seq_len = probe.shape[1] - 1
+        del probe
+        print(f"seq_len={seq_len}", flush=True)
+        train_ds = PackedChatDataset(str(data_dir / "train.ids.npy"),
+                                     str(data_dir / "train.wcode.npy"), seq_len)
+    val_path = plan_obj.resolved_val_dir() if plan_obj is not None else data_dir
+    val_ds = PackedChatDataset(str(val_path / "val.ids.npy"),
+                               str(val_path / "val.wcode.npy"), seq_len)
+    if plan_obj is not None:
+        print(f"[plan] 验证集固定用 {val_path}（换训练语料时不换验证集，否则曲线不可比）",
+              flush=True)
     collator = ChatDataCollator()
     print(f"train rows={len(train_ds)} val rows={len(val_ds)}", flush=True)
 
@@ -310,6 +343,13 @@ def main():
     print(f"[ctrl] 外部控制旗标 {_ctrl_path()}（当前 {_ctrl_read() or 'run'}）",
           flush=True)
     trainer.add_callback(_ctrl_cb())
+    if plan_obj is not None:
+        from retnet_hf.plan import make_plan_callback  # noqa: E402
+        # 显式绑定 trainer + dataset：不依赖 transformers 版本给 callback 传什么 kw。
+        # 4.57 实测 on_step_end 的 kw 里没有 trainer，只靠 kw.get("trainer") 会让换料静默失效。
+        plan_cb = make_plan_callback(args.plan).bind(trainer, train_ds)
+        trainer.add_callback(plan_cb)
+        print("[plan] 热加载回调已挂：改计划文件即生效，无需重启训练", flush=True)
     if args.compile:
         # ⚠ inductor 是**惰性**编译：`torch.compile()` 本身几乎不做事，真正的
         # 编译发生在第一次前向 —— 那时早已离开这个 try 块。所以缺 triton 时
