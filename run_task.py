@@ -49,6 +49,8 @@ import time
 from pathlib import Path
 
 REQUIRED = ("model_dir", "data_dir", "output_dir")
+#: 用 ``plan`` 时数据源与步数都由计划文件决定，data_dir/max_steps 不再必填
+REQUIRED_WITH_PLAN = ("model_dir", "output_dir")
 DEFAULTS = {
     "name": "task",
     "precision": "fp32",
@@ -82,9 +84,15 @@ DEFAULTS = {
 
 def load_config(path):
     cfg = json.loads(Path(path).read_text(encoding="utf-8"))
-    for k in REQUIRED:
+    required = REQUIRED_WITH_PLAN if cfg.get("plan") else REQUIRED
+    for k in required:
         if not cfg.get(k):
             raise ValueError(f"missing required key: {k}")
+    if cfg.get("plan"):
+        if not Path(str(cfg["plan"])).exists():
+            raise ValueError(f"plan 文件不存在: {cfg['plan']}")
+        cfg.setdefault("data_dir", "")
+        cfg.setdefault("max_steps", 0)
     merged = {**DEFAULTS, **cfg}
     if merged["compile"]:
         merged["compile"] = True
@@ -92,7 +100,31 @@ def load_config(path):
 
 
 def build_cmd(cfg):
-    """Translate config -> train.py argv list."""
+    """Translate config -> train.py argv list.
+
+    ``plan`` 存在时改走计划模式：数据源、总步数、LR 曲线全部由计划文件决定，
+    并且训练进程会**热加载**该文件（见 retnet_hf/plan.py）。此时不传
+    ``--data_dir`` / ``--max_steps``，否则会和计划里的值打架。
+    配置里仍可写 ``data_dir``，仅作为日志/兼容用途。
+    """
+    if cfg.get("plan"):
+        cmd = [
+            sys.executable, cfg.get("train_script", "retnet_hf/train.py"),
+            "--model_dir", str(cfg["model_dir"]),
+            "--output_dir", str(cfg["output_dir"]),
+            "--plan", str(cfg["plan"]),
+            "--batch_size", str(cfg["batch_size"]),
+            "--mode", str(cfg["mode"]),
+            "--chunk_size", str(cfg["chunk_size"]),
+            "--precision", str(cfg["precision"]),
+            "--seed", str(cfg["seed"]),
+            "--eval_batches", "40",
+            "--save_total_limit", str(cfg.get("save_total_limit", 4)),
+            "--weight_decay", str(cfg.get("weight_decay", 0.1)),
+            "--max_grad_norm", str(cfg.get("max_grad_norm", 1.0)),
+            "--dataloader_workers", str(cfg.get("dataloader_workers", 0)),
+        ]
+        return cmd
     return [
         sys.executable, cfg.get("train_script", "retnet_hf/train.py"),
         "--model_dir", str(cfg["model_dir"]),
