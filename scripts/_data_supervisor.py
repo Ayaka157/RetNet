@@ -256,9 +256,14 @@ def main() -> int:
         for spec in SPECS:
             out_dir = ROOT / "data_cache" / spec["out"]
             if pack_ready(out_dir):
-                # 包已就绪 → 顺手清原始下载
-                if (BASE / spec["src"]).exists():
+                # 包已就绪 → 整个源目录都可以删（含解压产物与未下完的部分）。
+                # 2026-10-18 实测：只调 release_raw 时，textbook 解压出的 3.8 GB
+                # 留在 data/hf 里没人管，因为它不在下载清单中。
+                src_dir0 = BASE / spec["src"]
+                if src_dir0.exists():
                     release_raw(spec)
+                    shutil.rmtree(src_dir0, ignore_errors=True)
+                    log(f"  已删除 {spec['src']} 整个目录（含解压产物）")
                 continue
             local_full = f"data/hf/{spec['src']}"
             have_b, want_b, have, want = check_and_clean(
