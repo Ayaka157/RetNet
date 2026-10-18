@@ -89,6 +89,7 @@ def tokenize(name: str, src: str, out: str, cap: int, patterns: list[str]) -> bo
 
 def main() -> int:
     log("延长段备料启动")
+    mix_done = False
     for rnd in range(1, 240):
         c2 = tokenize("code2", "ling_coder", "data_cache/hf_pack_code2",
                       5_000_000_000, ["*.parquet"])
@@ -98,15 +99,22 @@ def main() -> int:
         # 子代理实测口径：中文约 0.27 token/字节，0.74 GB -> 约 0.3B token。
         pg = tokenize("prog", "prog_zh", "data_cache/hf_pack_prog",
                       350_000_000, ["*.parquet"])
-        if c2 and mt and pg:
-            log("三个新语料都就绪，构建 SFT 混合包")
+        # ⚠️ 混合包只依赖 code2 + math，**不依赖 prog**。
+        # prog 在下载顺序里排最后，如果要求三个都齐，prog 一慢就永远不建混合包，
+        # 而 sft_mix 段明天 15:30 就要用（HF 混合比例里本来也没有 prog）。
+        if c2 and mt and not mix_done:
+            log("code2 + math 就绪，构建 SFT 混合包（不等 prog）")
             rc = subprocess.call(
                 [PY, "-u", "scripts/build_sft_mix.py", "--out", "data_cache/hf_pack_sft",
                  "--rows", "300000"], cwd=str(ROOT))
             if rc == 0:
-                log("全部完成")
-                return 0
-            log(f"混合包构建失败 rc={rc}")
+                mix_done = True
+                log("SFT 混合包完成")
+            else:
+                log(f"混合包构建失败 rc={rc}")
+        if mix_done and pg:
+            log("全部完成（code2 / math / prog / sft_mix）")
+            return 0
         time.sleep(300)
     log("达到最大轮数")
     return 1
