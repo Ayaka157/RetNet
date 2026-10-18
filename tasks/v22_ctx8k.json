@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "v22：8k 长上下文扩展（从 v21 的 gamma 重初始化模型起步）",
+    "关键：seq_len 8192、batch 4（per-GPU）-> 等效 65,536 token/步，与 v21 同吞吐",
+    "LR 用 2e-5（迁移学习，比从头训低一个量级）",
+    "--no_decay_1d 必须开，否则 gamma 又会被 weight decay 拉下去"
+  ],
+  "name": "v22_ctx8k",
+  "model_dir": "checkpoints/retnet_500m_v22_init",
+  "output_dir": "checkpoints/retnet_500m_v22",
+  "plan": "tasks/plan_ctx8k.json",
+  "nproc": 2,
+  "master_port": 29510,
+  "precision": "bf16",
+  "mode": "chunkwise",
+  "chunk_size": 128,
+  "batch_size": 4,
+  "grad_accum": 1,
+  "dataloader_workers": 0,
+  "optim": "adamw_bnb_8bit",
+  "grad_checkpoint": false,
+  "compile": true,
+  "compile_mode": "max-autotune-no-cudagraphs",
+  "fast_chunkwise": true,
+  "no_decay_1d": true,
+  "save_total_limit": 2,
+  "seed": 1234,
+  "resume": false,
+  "auto_restart_max": 0,
+  "restart_wait_min": 3
+}

@@ -46,6 +46,32 @@ class CompileSafeTrainer(Trainer):
     已拉回的 checkpoint-10000 用 ``scripts/strip_compile_prefix.py`` 救活。
     """
 
+    def get_decay_parameter_names(self, model) -> list[str]:
+        """哪些参数要施加 weight decay。默认规则只排除 bias 与 LayerNorm.weight，
+        而 `msr.gamma` 是**裸 nn.Parameter**，两头都不沾，于是被 wd=0.1 一路拉小。
+
+        实测代价（2026-10-18，subagent 从 safetensors 里读出来的）：
+        gamma 从初值 1-2^(-5-h) 降到 0.667(ep1) → 0.601(ep2) → 0.543(ep3)，
+        每 epoch 稳定 ×0.90 —— 这正是 AdamW 解耦权重衰减的固定衰减率，不是学出来的；
+        10 个头的 gamma 在 20 层里**逐位相同**（0.542977±1e-6）就是铁证。
+        后果：半衰期从 22–1400 token 掉到约 1 token，**有效上下文只剩约 500 token**，
+        2048 窗口后 3/4 用不上。
+
+        修法：所有 **1 维参数**（各种 norm 的 scale、门控、衰减）都不做衰减。
+        用 ``--no_decay_1d`` 开启，默认关闭以保持与历史 run 一致。
+        """
+        names = super().get_decay_parameter_names(model)
+        if not getattr(self, "_no_decay_1d", False):
+            return names
+        one_d = {n for n, p in model.named_parameters() if p.ndim <= 1}
+        kept = [n for n in names if n not in one_d]
+        dropped = len(names) - len(kept)
+        if dropped and not getattr(self, "_no_decay_logged", False):
+            self._no_decay_logged = True
+            print(f"[opt] 1 维参数移出 weight decay：{dropped} 个"
+                  f"（含 gamma）", flush=True)
+        return kept
+
     def save_model(self, output_dir=None, _internal_call=False):
         inner = getattr(self.model, "_orig_mod", None)
         if inner is None:
@@ -231,6 +257,10 @@ def main():
     ap.add_argument("--optim", default=None,
                     help="TrainingArguments.optim；"
                          "adamw_bnb_8bit 省 1.5 GiB 优化器状态（关检查点的前提）")
+    ap.add_argument("--no_decay_1d", action="store_true",
+                    help="把 1 维参数（各种 norm scale / 门控 / msr.gamma）移出 weight decay。"
+                         "实测 gamma 被 wd 从 1-2^-5 拉到 0.543（每 epoch x0.90），"
+                         "有效上下文从 1400 token 掉到约 1 token")
     ap.add_argument("--ddp_find_unused_parameters", action="store_true",
                     help="多卡 DDP 时允许存在未被使用的参数。本模型的 growth 张量里有一批"
                          "gamma=0 的仿射项，先试默认 False；报 unused parameter 时加这个开关")
@@ -353,6 +383,10 @@ def main():
         eval_dataset=val_ds,
         data_collator=collator,
     )
+    # 1 维参数（含 msr.gamma）是否免 weight decay —— 见 get_decay_parameter_names 的注释
+    trainer._no_decay_1d = bool(getattr(args, "no_decay_1d", False))
+    if trainer._no_decay_1d:
+        print("[opt] --no_decay_1d 已开启：所有 1 维参数不做 weight decay", flush=True)
     # torch.compile 必须在 Trainer 构造之后：transformers 4.57 的 RemoveColumnsCollator
     # 惰性地按 model.forward 签名过滤数据列，compile 包装后签名丢失会导致 input_ids 被滤掉。
     # 因此先强制缓存未编译模型的签名，再替换 model。

@@ -180,6 +180,8 @@ def build_cmd_full(cfg):
     cmd += ["--grad_accum", str(cfg.get("grad_accum", 1))]
     if cfg.get("optim"):
         cmd += ["--optim", str(cfg["optim"])]
+    if cfg.get("no_decay_1d"):
+        cmd.append("--no_decay_1d")
     if cfg.get("ddp_find_unused_parameters"):
         cmd.append("--ddp_find_unused_parameters")
     if cfg["resume"]:
