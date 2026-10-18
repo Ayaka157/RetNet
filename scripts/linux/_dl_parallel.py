@@ -78,6 +78,18 @@ def fetch(url: str, out: Path, want: int) -> tuple[str, int, str]:
 
 
 def main() -> int:
+    # ⚠️ 单实例锁：两个下载器同时写同一批文件会交错追加，得到「比期望还大」的坏文件。
+    #    2026-10-18 实测：手工重启下载器时没发现监督器又拉起了一个，两个实例并存
+    #    十几分钟，train_00009/00013 都被写超（+6.7 MB / +64 MB），只能删了重下。
+    #    用 flock 保证全局唯一，比「pgrep 数进程」可靠。
+    import fcntl
+    lock_fh = open(ROOT / "logs/.dl_parallel.lock", "w")
+    try:
+        fcntl.flock(lock_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        log("已有一个下载器实例在跑，本实例退出")
+        return 0
+
     rows = read_manifest()
     if not rows:
         log("清单为空")
