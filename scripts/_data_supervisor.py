@@ -175,6 +175,7 @@ def drop_from_manifest(src: str) -> None:
         # 先杀掉下载器：它在启动时把清单读进内存，不重启就还会按旧清单继续下
         subprocess.call(["bash", "-c", "pkill -f 'dl_parallel[.]py' || true"])
         time.sleep(1)
+        subprocess.call(["bash", "-c", "pkill -P 1 curl || true"])   # 连它的 curl 子进程一起清
         MANIFEST.write_text("\n".join(keep) + "\n", encoding="utf-8")
         log(f"  已从下载清单移除 {src}（分词完成，不再重下，下载器将按新清单重启）")
 
@@ -229,7 +230,11 @@ def ensure_downloader() -> None:
     """
     if downloader_running():
         return
-    log("  下载器未运行，重新拉起")
+    # ⚠️ 先清孤儿 curl：上一次下载器被 kill 时，它的 curl 子进程会被 init 收养并继续写
+    #    同一批文件；新实例一启动就和它们交错追加，得到「比期望还大」的坏文件。
+    #    2026-10-18 实测：13 个 curl 里 6 个是孤儿，下载量在倒退（463 -> 425 MB）。
+    subprocess.call(["bash", "-c", "pkill -P 1 curl || true"])
+    log("  下载器未运行，重新拉起（已清孤儿 curl）")
     # 并行版：hf-mirror 镜像 + 6 路并发。顺序 curl 在抖动代理下只有 5 KB/s-1.6 MB/s，
     # 并行 6 路实测合计 2.6 MB/s，13 GB 从十几小时缩到约 1.5 h。
     subprocess.Popen([PY, "-u", "scripts/linux/_dl_parallel.py"],
