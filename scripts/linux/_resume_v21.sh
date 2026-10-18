@@ -27,7 +27,7 @@ CKPT=$(ls -d "$OUT"/checkpoint-* 2>/dev/null | sort -t- -k2 -n | tail -1)
 echo "  最近 checkpoint: $CKPT"
 
 echo "=== 1) 验证 checkpoint 可加载（不跑完整前向，只查键）==="
-"$PY" - <<PYCHECK
+CKPT="$CKPT" "$PY" - <<PYCHECK
 import glob, os
 from safetensors.torch import load_file
 p = os.environ["CKPT"]

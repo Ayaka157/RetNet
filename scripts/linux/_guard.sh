@@ -85,7 +85,9 @@ case "${1:-status}" in
         echo "  [deadman] 已挂 $((local_s/3600))h$(( local_s%3600/60 ))m -> $(date -d "+${local_s} seconds" '+%m-%d %H:%M')"
         ;;
       tripwire)
-        h=$(python3 -c "print(${3:?需要时长秒数}/3600)" 2>/dev/null || echo "10")
+        # 实例上没有 python3（只有 /root/miniconda3/bin/python），用 awk 换算。
+        # 原先写成 `python3 ... || echo 10`，在实例上会静默退化成 10 小时。
+        h=$(awk -v s="${3:?需要时长秒数}" 'BEGIN{printf "%.4f", s/3600}')
         SKIP_FINALIZE=1 setsid nohup bash scripts/linux/_graceful_stop.sh "$h" 240 0 \
           > "$LOG/tripwire.out" 2>&1 < /dev/null &
         echo "  [tripwire] 已挂 ${3}s -> $(date -d "+${3} seconds" '+%m-%d %H:%M')"
