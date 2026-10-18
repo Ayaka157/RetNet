@@ -12,9 +12,10 @@
     "【为什么代码段从 1.55B 砍到 0.885B】",
     "  2 卡性价比比单卡差 35%，余额只够 4B token。为保证 pretrain/网页/教材/退火都不缩，",
     "  先从代码段减。若实测比 1.30 it/s 快，可热加载把 code_ling 的 steps 改回来。",
-    "【2026-10-18 热更新】实测 DDP 稳态 1.69 it/s（关掉 find_unused_parameters 后从 1.30 提上来），同预算可多跑 30% 步数，全部加给代码段（13,500 -> 31,545）。total_steps 从 60,955 涨到 78,999，余弦被拉长；当前还在 warmup 末端，LR 变化可忽略。"
+    "【2026-10-18 热更新】实测 DDP 稳态 1.69 it/s（关掉 find_unused_parameters 后从 1.30 提上来），同预算可多跑 30% 步数，全部加给代码段（13,500 -> 31,545）。total_steps 从 60,955 涨到 78,999，余弦被拉长；当前还在 warmup 末端，LR 变化可忽略。",
+    "【2026-10-18 16:30 热更新】实测 1.69 it/s；按“剩余时间 x 速率 - eval 开销”精算，79,000 步会跑到 03:38 撞上死手(03:26)，收敛到 76,000 步可于 03:07 完成并让余弦走完。code 段 31,545 -> 28,545。"
   ],
-  "plan_version": 5,
+  "plan_version": 6,
   "seq_len": 2048,
   "min_free_gb": 10,
   "stages": [
@@ -44,7 +45,7 @@
       "data_dir": "data_cache/hf_pack_code",
       "mode": "flat",
       "min_shards": 10,
-      "steps": 31545,
+      "steps": 28545,
       "gc": true,
       "_note": "inclusionAI/Ling-Coder-SFT 约 2.067B token（实测吞吐 1.69 it/s 后回填）"
     },
