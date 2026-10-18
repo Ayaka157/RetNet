@@ -1,0 +1,78 @@
+{
+  "_readme": [
+    "训练计划（2 卡 DDP 版，按实测吞吐与余额定长）。",
+    "",
+    "【为什么是这个长度】",
+    "  实测 DDP 稳态 1.30 it/s（每步 65,536 token）= 85,197 tok/s，是单卡的 1.49x。",
+    "  单价 ¥13.97/h，余额 ¥198.50 → 14.2 h。留 ~1 h 缓冲 → 目标 13.0 h → 60,955 步。",
+    "  token: 60,955 x 65,536 = 3.995B；其中新增唯一 token 3.831B",
+    "  （pretrain 2.307 + 网页 0.459 + 代码 0.885 + 教材 0.180）",
+    "  → 累计唯一 4.383B / 504.18M 参数 = 8.69 token/参数。",
+    "",
+    "【为什么代码段从 1.55B 砍到 0.885B】",
+    "  2 卡性价比比单卡差 35%，余额只够 4B token。为保证 pretrain/网页/教材/退火都不缩，",
+    "  先从代码段减。若实测比 1.30 it/s 快，可热加载把 code_ling 的 steps 改回来。",
+    "【2026-10-18 热更新】实测 DDP 稳态 1.69 it/s（关掉 find_unused_parameters 后从 1.30 提上来），同预算可多跑 30% 步数，全部加给代码段（13,500 -> 31,545）。total_steps 从 60,955 涨到 78,999，余弦被拉长；当前还在 warmup 末端，LR 变化可忽略。"
+  ],
+  "plan_version": 5,
+  "seq_len": 2048,
+  "min_free_gb": 10,
+  "stages": [
+    {
+      "name": "pretrain_v2_noskypile",
+      "data_dir": "data_cache/pretrain_v2",
+      "mode": "flat",
+      "exclude": [
+        "skypile_"
+      ],
+      "min_shards": 46,
+      "steps": 35205,
+      "gc": true,
+      "_note": "2,307,246,540 token，跑完自动回收约 4.3 GB"
+    },
+    {
+      "name": "chinese_web_hq",
+      "data_dir": "data_cache/hf_pack_chinese_web",
+      "mode": "flat",
+      "min_shards": 10,
+      "steps": 7000,
+      "gc": true,
+      "_note": "Morton-Li 高质量中文网页前 13 片，替代 skypile"
+    },
+    {
+      "name": "code_ling",
+      "data_dir": "data_cache/hf_pack_code",
+      "mode": "flat",
+      "min_shards": 10,
+      "steps": 31545,
+      "gc": true,
+      "_note": "inclusionAI/Ling-Coder-SFT 约 2.067B token（实测吞吐 1.69 it/s 后回填）"
+    },
+    {
+      "name": "textbook",
+      "data_dir": "data_cache/hf_pack_textbook",
+      "mode": "flat",
+      "min_shards": 1,
+      "steps": 2750,
+      "gc": true,
+      "_note": "Fineweb-Edu-Chinese-V3 教材/学科"
+    },
+    {
+      "name": "chat_anneal",
+      "data_dir": "data_cache/chat_pack_v13",
+      "mode": "packed",
+      "steps": 2500,
+      "gc": false,
+      "_note": "对话退火，保住 demo 能力"
+    }
+  ],
+  "lr": {
+    "peak": 0.00011,
+    "min": 1.1e-05,
+    "warmup": 250
+  },
+  "save_steps": 1200,
+  "eval_steps": 1200,
+  "val_dir": "data_cache/chat_pack_v13",
+  "notes": "v21（2卡，热更新）：79k 步 = 5.18B token，唯一 token 5.01B → 11.04 token/参数。"
+}

@@ -324,6 +324,17 @@ def main():
     if args.optim:
         training_args.optim = args.optim
         print(f"optimizer: {args.optim}", flush=True)
+    # DDP 默认会把 find_unused_parameters 打开（冒烟日志：'find_unused_parameters=True
+    # was specified in DDP constructor, but did not find any unused parameters'）。
+    # 本模型确实没有未使用参数（growth 里 gamma=0 的张量仍参与前向，梯度存在只是为 0），
+    # 开着只会每步多遍历一遍 autograd 图 → 纯开销。多卡时显式关掉。
+    import os as _os
+    if int(_os.environ.get('WORLD_SIZE', '1') or 1) > 1 and not args.ddp_find_unused_parameters:
+        if hasattr(training_args, 'ddp_find_unused_parameters_true'):
+            training_args.ddp_find_unused_parameters_true = False
+        if hasattr(training_args, 'ddp_find_unused_parameters'):
+            training_args.ddp_find_unused_parameters = False
+        print('DDP: find_unused_parameters = False（实测无未使用参数，关掉省开销）', flush=True)
     if args.ddp_find_unused_parameters:
         # transformers 4.46 起把开关改名成 *_true（旧名已弃用）
         if hasattr(training_args, "ddp_find_unused_parameters_true"):

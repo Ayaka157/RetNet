@@ -53,24 +53,36 @@ def log(msg: str) -> None:
 
 
 def iter_records(patterns, kind: str):
-    """按文件顺序产出 dict 记录。"""
+    """按文件顺序产出 dict 记录。
+
+    **打不开的文件跳过**：下载器可能正在写某个 parquet，footer 还没落盘，
+    ``ParquetFile`` 会抛 ``Parquet magic bytes not found in footer``。
+    跳过而不是崩 —— 让分片能在数据齐了之后重跑。
+    """
     files = []
     for pat in patterns:
-        files.extend(sorted(glob.glob(pat)))
+        files.extend(sorted(glob.glob(pat, recursive=True)))
     if not files:
         raise SystemExit(f"没有匹配到任何输入文件：{patterns}")
     log(f"[input] {len(files)} 个文件")
+    skipped = 0
     for fi, path in enumerate(files):
-        log(f"[input] ({fi + 1}/{len(files)}) {os.path.basename(path)}")
         if kind == "parquet":
             import pyarrow.parquet as pq
-            pf = pq.ParquetFile(path)
+            try:
+                pf = pq.ParquetFile(path)
+            except Exception as exc:                            # noqa: BLE001
+                skipped += 1
+                log(f"[input] 跳过 {os.path.basename(path)}（{type(exc).__name__}，可能正在下载）")
+                continue
+            log(f"[input] ({fi + 1}/{len(files)}) {os.path.basename(path)}")
             for batch in pf.iter_batches(batch_size=2048):
                 d = batch.to_pydict()
                 keys = list(d.keys())
                 for i in range(len(d[keys[0]])):
                     yield {k: d[k][i] for k in keys}
         else:
+            log(f"[input] ({fi + 1}/{len(files)}) {os.path.basename(path)}")
             with open(path, "r", encoding="utf-8", errors="replace") as f:
                 for line in f:
                     line = line.strip()
@@ -82,15 +94,61 @@ def iter_records(patterns, kind: str):
                         continue
 
 
+def flatten_value(v) -> str:
+    """把任意字段值压成文本。
+
+    HF 数据集的字段形态很杂：纯字符串、``[{'role','content'}]`` 的对话列表、
+    ``[{'explanation':...}]`` 的标注列表、dict…… 直接 ``str(v)`` 会得到 Python repr
+    （带 ``{'role': ...}`` 噪声），必须按结构展开。
+    """
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v
+    if isinstance(v, list):
+        parts = []
+        for item in v:
+            if isinstance(item, dict):
+                role = item.get("role") or item.get("from") or ""
+                content = item.get("content")
+                if content is None:
+                    content = item.get("text") or item.get("explanation") or ""
+                parts.append((str(role) + ": " + str(content)) if role else str(content))
+            else:
+                parts.append(str(item))
+        return "\n".join(p for p in parts if p)
+    if isinstance(v, dict):
+        for k in ("content", "text", "value"):
+            if v.get(k):
+                return str(v[k])
+        return ""
+    return str(v)
+
+
+#: auto 模式下跳过的字段（ID / 链接 / 元信息，进训练是纯噪声）
+_SKIP_FIELD_HINTS = ("id", "uuid", "url", "uri", "hash", "sha", "score", "count",
+                     "index", "license", "source", "date", "time")
+
+
+def auto_text_fields(parquet_file) -> list[str]:
+    """从 parquet schema 猜要拼接的字段：留下像「正文」的，剔掉 ID/元信息。"""
+    import pyarrow.parquet as pq
+    names = pq.ParquetFile(parquet_file).schema_arrow.names
+    keep = []
+    for n in names:
+        low = n.lower()
+        if any(h in low for h in _SKIP_FIELD_HINTS):
+            continue
+        keep.append(n)
+    return keep or names
+
+
 def pick_text(rec: dict, fields: list[str], sep: str) -> str | None:
     parts = []
     for f in fields:
-        v = rec.get(f)
-        if v is None:
-            continue
-        if not isinstance(v, str):
-            v = str(v)
-        parts.append(v)
+        s = flatten_value(rec.get(f))
+        if s:
+            parts.append(s)
     if not parts:
         return None
     return sep.join(parts)
@@ -114,11 +172,38 @@ def main(argv=None) -> int:
                     help="每条记录末尾追加 eos（纯文本流一般不需要，按语料决定）")
     args = ap.parse_args(argv)
 
-    from retnet.tokenizer import BPETokenizer
+    # 直接用 tokenizers 库：retnet/tokenizer.py 的 BPETokenizer 只是它的薄封装，
+    # 而实例上并没有上传 retnet/ 包（训练只依赖 retnet_hf/），依赖它会让分词跑不起来。
+    # add_special_tokens=False 与 BPETokenizer.encode 的实现逐字一致，
+    # 保证新语料与 chat_pack_v13 的编码口径相同。
+    from tokenizers import Tokenizer as _Tokenizer
 
-    tok = BPETokenizer.load(args.tokenizer)
-    log(f"[tok] vocab={tok.vocab_size}  pad={tok.pad_id} eos={tok.eos_id}")
-    fields = [x.strip() for x in args.text_field.split(",") if x.strip()]
+    _tk = _Tokenizer.from_file(str(args.tokenizer))
+    _vocab = _tk.get_vocab_size()
+    _eos = _tk.token_to_id("<eos>")
+
+    def encode_one(text: str):
+        return _tk.encode(text, add_special_tokens=False).ids
+
+    log(f"[tok] vocab={_vocab}  eos={_eos}（直接走 tokenizers，不依赖 retnet 包）")
+    if args.text_field.strip().lower() == "auto":
+        first = None
+        for pat in (args.parquet or args.jsonl):
+            for f in sorted(glob.glob(pat, recursive=True)):
+                try:
+                    auto_text_fields(f)
+                    first = f
+                    break
+                except Exception:                               # noqa: BLE001
+                    continue       # 正在下载的坏文件，跳过
+            if first:
+                break
+        if first is None:
+            raise SystemExit("--text-field auto 失败：没有任何可读的 parquet/jsonl 文件")
+        fields = auto_text_fields(first)
+        log(f"[fields] auto 选中（来自 {os.path.basename(first)}）: {fields}")
+    else:
+        fields = [x.strip() for x in args.text_field.split(",") if x.strip()]
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("shard_*.npy"):
@@ -155,12 +240,12 @@ def main(argv=None) -> int:
             errors += 1
             continue
         try:
-            ids = tok.encode(text)
+            ids = encode_one(text)
         except Exception:                                       # noqa: BLE001
             errors += 1
             continue
         if args.add_eos:
-            ids = ids + [tok.eos_id]
+            ids = ids + [_eos]
         buf.extend(ids)
         total += len(ids)
         while len(buf) >= args.tokens_per_shard:
@@ -180,7 +265,7 @@ def main(argv=None) -> int:
     flush(final=True)
     meta = {
         "tokenizer": args.tokenizer,
-        "tokenizer_vocab": tok.vocab_size,
+        "tokenizer_vocab": _vocab,
         "sources": patterns,
         "text_fields": fields,
         "sep": args.sep,
