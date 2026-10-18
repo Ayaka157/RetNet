@@ -34,12 +34,15 @@ PY = "/root/miniconda3/bin/python"
 #: cap = 分词产出上限（token）。计划只需要这么多，多分是白费时间与磁盘。
 #: math 不在计划里（余额只够跑 pretrain/网页/代码/教材/退火），所以**不分词**，省下 1 个多小时。
 SPECS = [
+    # need_gb：够分词所需的**完整**字节数（cap / 1.1，实测约 1.17 token/字节）。
+    # 不必等整个数据集下完：代码只要 2.07B token，9 个分片就够，
+    # 等剩下 18 个白等到段切换之后（2026-10-18 实测）。
     dict(name="code",     src="ling_coder",        out="hf_pack_code",        n=27, extract=False,
-         cap=2_500_000_000),
+         cap=2_500_000_000, need_gb=2.0),
     dict(name="web",      src="chinese_web_hq",    out="hf_pack_chinese_web", n=13, extract=False,
-         cap=700_000_000),
+         cap=700_000_000,   need_gb=0.64),
     dict(name="textbook", src="fineweb_edu_zh_v3", out="hf_pack_textbook",    n=18, extract=True,
-         cap=400_000_000),
+         cap=400_000_000,   need_gb=0.36),
 ]
 
 INTERVAL = 300          # 每轮的间隔秒数
@@ -65,18 +68,25 @@ def read_manifest() -> dict[str, list[tuple[str, int]]]:
 
 
 def check_and_clean(man: dict[str, list[tuple[str, int]]], local: str):
-    """校验该数据集；删掉大小不符的文件。返回 (完整?, 已有, 应有)。"""
+    """校验该数据集；删掉大小不符的文件。
+
+    返回 (完整字节数, 期望字节数, 完整文件数, 总文件数)。
+    """
     files = man.get(local, [])
     if not files:
-        return False, 0, 0
+        return 0, 0, 0, 0
     have = 0
+    have_bytes = 0
+    want_bytes = 0
     for fname, want in files:
         p = BASE / local / fname
         if not p.exists():
             continue
+        want_bytes += want
         size = p.stat().st_size
         if size == want:
             have += 1
+            have_bytes += size
         elif size > want:
             # 只有**比期望还大**才是确定损坏：snapshot_download 写了一半的文件
             # 会让 curl -C - 从错误偏移续写，多出来一截。
@@ -84,7 +94,7 @@ def check_and_clean(man: dict[str, list[tuple[str, int]]], local: str):
             # 两边每 5 分钟互相打架，永远下不完（2026-10-18 实测踩过）。
             log(f"  删除损坏文件（超大）{local}/{fname} (have={size} want={want})")
             p.unlink()
-    return have == len(files), have, len(files)
+    return have_bytes, want_bytes, have, len(files)
 
 
 def pack_ready(out_dir: Path) -> bool:
@@ -146,17 +156,46 @@ def prepare(spec) -> bool:
     d = json.loads((out_dir / "meta.json").read_text(encoding="utf-8"))
     log(f"  ✅ {spec['name']} 完成：{d['total_tokens'] / 1e9:.3f}B token / "
         f"{len(d['shards'])} 分片")
+    drop_from_manifest(spec["src"])
     return True
 
 
+def drop_from_manifest(src: str) -> None:
+    """把已分词的数据集从下载清单里摘掉。
+
+    否则 release_raw 删了原始包之后，下载器下一轮又看到「文件缺失」，
+    把几 GB 重新下一遍 —— 白耗带宽，还会在磁盘紧张时把刚腾出的空间吃回去。
+    """
+    if not MANIFEST.exists():
+        return
+    keep = [ln for ln in MANIFEST.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and ln.split("\t")[1] != src]
+    if len(keep) != len(MANIFEST.read_text(encoding="utf-8").splitlines()):
+        MANIFEST.write_text("\n".join(keep) + "\n", encoding="utf-8")
+        log(f"  已从下载清单移除 {src}（分词完成，不再重下）")
+
+
 def release_raw(spec) -> None:
-    """分片齐全后删掉原始下载，腾磁盘。"""
+    """分片齐全后删掉原始下载，腾磁盘。
+
+    ⚠️ 只删**大小与清单完全一致**的文件。下载器可能还在往同目录写后续分片，
+    整个 rmtree 会把在写的文件删掉（curl 会继续往已 unlink 的 inode 写，
+    最后得到一个查不到的文件，白下一场）。
+    """
     src_dir = BASE / spec["src"]
+    # 清单的 key 是 "ling_coder"；但 fname 可能带子目录（"data/train_00000..."），
+    # 而 rglob 拿到的 p.name 只有文件名 —— 必须两边都取 basename 才能匹配。
+    # 2026-10-18 实测：直接用 dict(get()) 导致命中 0 个文件，释放 0 GB。
+    want_map = {Path(f).name: w for f, w in read_manifest().get(spec["src"], [])}
     freed = 0
     for p in list(src_dir.rglob("*")):
-        if p.is_file():
-            freed += p.stat().st_size
-            p.unlink()
+        if not p.is_file():
+            continue
+        w = want_map.get(p.name)
+        if w is None or p.stat().st_size != w:
+            continue        # 不认识或还没下完，留着
+        freed += p.stat().st_size
+        p.unlink()
     for p in sorted(src_dir.rglob("*"), reverse=True):
         if p.is_dir():
             try:
@@ -209,9 +248,13 @@ def main() -> int:
                     release_raw(spec)
                 continue
             local_full = f"data/hf/{spec['src']}"
-            complete, have, want = check_and_clean(man, local_full.replace("data/hf/", ""))
-            if not complete:
-                pending.append(f"{spec['name']} {have}/{want}")
+            have_b, want_b, have, want = check_and_clean(
+                man, local_full.replace("data/hf/", ""))
+            need_b = spec.get("need_gb", 0) * 1e9
+            enough = have_b >= need_b if need_b else have == want
+            if not enough:
+                pending.append(f"{spec['name']} {have}/{want} "
+                               f"({have_b / 1e9:.1f}/{need_b / 1e9:.1f} GB 够用)")
                 continue
             log(f"=== {spec['name']} 下载齐全（{have}/{want}），开始分词 ===")
             if prepare(spec):
