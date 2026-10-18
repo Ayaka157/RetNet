@@ -90,7 +90,7 @@ def main(argv=None) -> int:
     log(f"[mix] 目标 {args.rows} 行；比例 " +
         ", ".join(f"{k}={v:.2f}({counts[k]}行)" for k, v in shares.items()))
 
-    parts_ids, parts_wc = [], []
+    parts_ids, parts_wc, used = [], [], []
 
     # --- 旧对话：直接取 packed 行，wcode 原样保留 ---
     chat = ROOT / args.chat
@@ -102,6 +102,7 @@ def main(argv=None) -> int:
         sel = rng.choice(n, size=take, replace=False)
         sel.sort()
         parts_ids.append(np.asarray(ids[sel], dtype=np.int16))
+        used.append("chat")
         parts_wc.append(np.asarray(wc[sel], dtype=np.uint8))
         log(f"[chat] 取 {take} 行（共 {n} 行，wcode 保留）")
     else:
@@ -117,6 +118,7 @@ def main(argv=None) -> int:
         rows = flat_rows(shards, counts[key], rng)
         parts_ids.append(rows)
         parts_wc.append(np.ones(rows.shape, dtype=np.uint8))
+        used.append(key)
         log(f"[{key}] 取 {rows.shape[0]} 行（来自 {len(shards)} 个分片）")
 
     if not parts_ids:
@@ -140,8 +142,8 @@ def main(argv=None) -> int:
     meta = {"rows": int(ids.shape[0]), "seq_len": 2048,
             "tokens": int(ids.shape[0] * 2048),
             "mix": {k: round(v, 3) for k, v in shares.items()},
-            "sources": {k: int(parts_ids[i].shape[0])
-                        for i, k in enumerate(["chat", "code", "textbook", "math"][:len(parts_ids)])}}
+            # 用实际用到的名字，而不是按固定顺序猜——缺源时标签会错位
+            "sources": {k: int(parts_ids[i].shape[0]) for i, k in enumerate(used)}}
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2),
                                    encoding="utf-8")
     log(f"[out] 已写入 {out}")
