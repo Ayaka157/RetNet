@@ -94,8 +94,12 @@ def main() -> int:
                       5_000_000_000, ["*.parquet"])
         mt = tokenize("math", "math_zh", "data_cache/hf_pack_math",
                       300_000_000, ["*.parquet"])
-        if c2 and mt:
-            log("两个新语料都就绪，构建 SFT 混合包")
+        # prog_zh：BAAI 中文编程语料（apache-2.0），用来把唯一 token 推过 20/参数。
+        # 子代理实测口径：中文约 0.27 token/字节，0.74 GB -> 约 0.3B token。
+        pg = tokenize("prog", "prog_zh", "data_cache/hf_pack_prog",
+                      350_000_000, ["*.parquet"])
+        if c2 and mt and pg:
+            log("三个新语料都就绪，构建 SFT 混合包")
             rc = subprocess.call(
                 [PY, "-u", "scripts/build_sft_mix.py", "--out", "data_cache/hf_pack_sft",
                  "--rows", "300000"], cwd=str(ROOT))
