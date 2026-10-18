@@ -112,6 +112,36 @@ def pack_ready(out_dir: Path) -> bool:
         return False
 
 
+
+def scrub_corrupt(spec) -> int:
+    """分词失败后，找出内容损坏（但大小正确）的 parquet 并删掉，让下载器重下。
+
+    为什么要单独一遍：`check_and_clean` 只比字节数，而两写入者交错写出的文件
+    大小可能恰好正确、内容却是坏的，读的时候才抛
+    `Corrupt snappy compressed data` / `ArrowInvalid`。
+    """
+    import pyarrow.parquet as pq
+    src_dir = BASE / spec["src"]
+    if not src_dir.exists():
+        return 0
+    bad = 0
+    for f in sorted(src_dir.rglob("*.parquet")):
+        try:
+            pf = pq.ParquetFile(f)
+            for _ in pf.iter_batches(batch_size=64):
+                break
+        except Exception:                                      # noqa: BLE001
+            log(f"  删除内容损坏的文件 {f.name}")
+            try:
+                f.unlink()
+                bad += 1
+            except OSError:
+                pass
+    if bad:
+        log(f"  共删除 {bad} 个损坏文件，等待重下")
+    return bad
+
+
 def prepare(spec) -> bool:
     """把一个数据集变成 flat 分片。返回是否已就绪。"""
     out_dir = ROOT / "data_cache" / spec["out"]
@@ -157,6 +187,7 @@ def prepare(spec) -> bool:
     rc = subprocess.call(cmd, cwd=str(ROOT))
     if rc != 0 or not pack_ready(out_dir):
         log(f"  分词失败 rc={rc}")
+        scrub_corrupt(spec)
         return False
     d = json.loads((out_dir / "meta.json").read_text(encoding="utf-8"))
     log(f"  ✅ {spec['name']} 完成：{d['total_tokens'] / 1e9:.3f}B token / "

@@ -81,11 +81,19 @@ def iter_records(patterns, kind: str, skip=()):
                 log(f"[input] 跳过 {os.path.basename(path)}（{type(exc).__name__}，可能正在下载）")
                 continue
             log(f"[input] ({fi + 1}/{len(files)}) {os.path.basename(path)}")
-            for batch in pf.iter_batches(batch_size=2048):
-                d = batch.to_pydict()
-                keys = list(d.keys())
-                for i in range(len(d[keys[0]])):
-                    yield {k: d[k][i] for k in keys}
+            # ⚠️ 只包住 open 不够：大小校验通过、但内容损坏的文件会在 iter_batches 里
+            #    抛 "Corrupt snappy compressed data"，把整次分词打断（2026-10-18 实测）。
+            #    跳过它继续，让这一轮仍然产出可用分片。
+            try:
+                for batch in pf.iter_batches(batch_size=2048):
+                    d = batch.to_pydict()
+                    keys = list(d.keys())
+                    for i in range(len(d[keys[0]])):
+                        yield {k: d[k][i] for k in keys}
+            except Exception as exc:                            # noqa: BLE001
+                skipped += 1
+                log(f"[input] 中途损坏，放弃 {os.path.basename(path)}（{type(exc).__name__}: {exc}）")
+                continue
         else:
             log(f"[input] ({fi + 1}/{len(files)}) {os.path.basename(path)}")
             with open(path, "r", encoding="utf-8", errors="replace") as f:

@@ -54,6 +54,7 @@ def fetch(url: str, out: Path, want: int) -> tuple[str, int, str]:
             log(f"  删除超大文件 {out.name}（have={have} want={want}）")
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    resume_ok = True
     for attempt in range(1, RETRIES + 1):
         # ⚠️ 每一次重试前都要重新检查「超大」：curl 对超大文件返回 rc=0，
         #    光看返回码会一直重试却永远不收敛。实测 train_00010 比期望多 32768 字节，
@@ -62,7 +63,9 @@ def fetch(url: str, out: Path, want: int) -> tuple[str, int, str]:
         if out.exists() and out.stat().st_size > want:
             log(f"  超大文件，删除重下 {out.name}（have={out.stat().st_size} want={want}）")
             out.unlink()
-        cmd = ["curl", "-L", "-C", "-", "-sS",
+        # rc=33 = 服务端不支持 Range：带 -C - 会一直失败，必须丢掉残缺文件从头下
+        resume_flag = ["-C", "-"] if resume_ok else []
+        cmd = ["curl", "-L", *resume_flag, "-sS",
                "--retry", "3", "--retry-delay", "3",
                "--connect-timeout", "20", "--max-time", "3600",
                "--speed-limit", "512", "--speed-time", "180",
@@ -72,6 +75,10 @@ def fetch(url: str, out: Path, want: int) -> tuple[str, int, str]:
         if have == want:
             return out.name, have, "ok"
         log(f"  {out.name} 第 {attempt} 次: rc={rc} have={have}/{want}")
+        if rc == 33:                     # 不支持断点续传 -> 下一轮从头下
+            resume_ok = False
+            if out.exists():
+                out.unlink()
         time.sleep(min(30, 3 * attempt))
     have = out.stat().st_size if out.exists() else 0
     return out.name, have, "fail"
