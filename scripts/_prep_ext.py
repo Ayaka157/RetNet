@@ -60,7 +60,8 @@ def pack_ready(d: Path) -> bool:
         return False
 
 
-def tokenize(name: str, src: str, out: str, cap: int, patterns: list[str]) -> bool:
+def tokenize(name: str, src: str, out: str, cap: int, patterns: list[str],
+             fields: str = "auto") -> bool:
     out_dir = ROOT / out
     if pack_ready(out_dir):
         log(f"  {name} 已就绪，跳过")
@@ -79,7 +80,7 @@ def tokenize(name: str, src: str, out: str, cap: int, patterns: list[str]) -> bo
     cmd = [PY, "-u", "scripts/build_flat_corpus.py",
            "--tokenizer", "data_cache/chat_pack_v13/bpe_tokenizer.json",
            "--out", out, "--parquet", *files,
-           "--text-field", "auto", "--max-tokens", str(cap),
+           "--text-field", fields, "--max-tokens", str(cap),
            "--tokens-per-shard", "250000000"]
     rc = subprocess.call(cmd, cwd=str(ROOT))
     ok = rc == 0 and pack_ready(out_dir)
@@ -97,8 +98,11 @@ def main() -> int:
                       300_000_000, ["*.parquet"])
         # prog_zh：BAAI 中文编程语料（apache-2.0），用来把唯一 token 推过 20/参数。
         # 子代理实测口径：中文约 0.27 token/字节，0.74 GB -> 约 0.3B token。
+        # ⚠️ 必须显式指定 text 列：这份 parquet 除了 text 还有 alnum_ratio /
+        #    perplexity / industry_type 等 **10 个数值元数据列**，auto 会把它们
+        #    当正文拼进去，等于往语料里撒数字噪声。
         pg = tokenize("prog", "prog_zh", "data_cache/hf_pack_prog",
-                      350_000_000, ["*.parquet"])
+                      350_000_000, ["*.parquet"], fields="text")
         # ⚠️ 混合包只依赖 code2 + math，**不依赖 prog**。
         # prog 在下载顺序里排最后，如果要求三个都齐，prog 一慢就永远不建混合包，
         # 而 sft_mix 段明天 15:30 就要用（HF 混合比例里本来也没有 prog）。
