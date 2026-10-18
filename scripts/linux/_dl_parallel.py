@@ -55,6 +55,13 @@ def fetch(url: str, out: Path, want: int) -> tuple[str, int, str]:
     out.parent.mkdir(parents=True, exist_ok=True)
 
     for attempt in range(1, RETRIES + 1):
+        # ⚠️ 每一次重试前都要重新检查「超大」：curl 对超大文件返回 rc=0，
+        #    光看返回码会一直重试却永远不收敛。实测 train_00010 比期望多 32768 字节，
+        #    6 次重试后 have 一动不动（2026-10-18）。
+        #    超大说明之前从错误偏移续写过，只能删掉从头下。
+        if out.exists() and out.stat().st_size > want:
+            log(f"  超大文件，删除重下 {out.name}（have={out.stat().st_size} want={want}）")
+            out.unlink()
         cmd = ["curl", "-L", "-C", "-", "-sS",
                "--retry", "3", "--retry-delay", "3",
                "--connect-timeout", "20", "--max-time", "3600",

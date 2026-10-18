@@ -168,6 +168,8 @@ def main(argv=None) -> int:
     ap.add_argument("--tokens-per-shard", type=int, default=250_000_000,
                     help="每个分片的 token 数（默认 2.5e8 ≈ 500 MB int16）")
     ap.add_argument("--limit-records", type=int, default=0, help="只用前 N 条（调试）")
+    ap.add_argument("--max-tokens", type=int, default=0,
+                    help="产出达到 N token 就停（0=不限）。计划只需要一部分语料时用它省时间省磁盘")
     ap.add_argument("--add-eos", action="store_true",
                     help="每条记录末尾追加 eos（纯文本流一般不需要，按语料决定）")
     args = ap.parse_args(argv)
@@ -188,10 +190,22 @@ def main(argv=None) -> int:
     log(f"[tok] vocab={_vocab}  eos={_eos}（直接走 tokenizers，不依赖 retnet 包）")
     if args.text_field.strip().lower() == "auto":
         first = None
-        for pat in (args.parquet or args.jsonl):
+        fields = []
+        for pat in list(args.parquet or []) + list(args.jsonl or []):
             for f in sorted(glob.glob(pat, recursive=True)):
                 try:
-                    auto_text_fields(f)
+                    if f.endswith((".jsonl", ".json")):
+                        # jsonl 没有 schema，取第一条记录的键
+                        with open(f, encoding="utf-8") as fh:
+                            for line in fh:
+                                line = line.strip()
+                                if line:
+                                    fields = list(json.loads(line).keys())
+                                    break
+                        if not fields:
+                            continue
+                    else:
+                        fields = auto_text_fields(f)
                     first = f
                     break
                 except Exception:                               # noqa: BLE001
@@ -200,7 +214,6 @@ def main(argv=None) -> int:
                 break
         if first is None:
             raise SystemExit("--text-field auto 失败：没有任何可读的 parquet/jsonl 文件")
-        fields = auto_text_fields(first)
         log(f"[fields] auto 选中（来自 {os.path.basename(first)}）: {fields}")
     else:
         fields = [x.strip() for x in args.text_field.split(",") if x.strip()]
@@ -234,6 +247,11 @@ def main(argv=None) -> int:
     for rec in iter_records(patterns, kind):
         seen += 1
         if args.limit_records and seen > args.limit_records:
+            break
+        # token 上限：计划只吃 2.07B token 的代码，而整份语料分词要 2 小时、
+        # 产出 7B+ token，既浪费磁盘又赶不上阶段切换。够了就停。
+        if args.max_tokens and total >= args.max_tokens:
+            log(f"[cap] 已达 {args.max_tokens:,} token 上限，提前结束")
             break
         text = pick_text(rec, fields, args.sep)
         if not text:

@@ -31,11 +31,15 @@ BASE = ROOT / "data/hf"
 PY = "/root/miniconda3/bin/python"
 
 #: 每个目标包：源目录、产物目录、期望文件数、是否需要先解 tar.gz
+#: cap = 分词产出上限（token）。计划只需要这么多，多分是白费时间与磁盘。
+#: math 不在计划里（余额只够跑 pretrain/网页/代码/教材/退火），所以**不分词**，省下 1 个多小时。
 SPECS = [
-    dict(name="code",     src="ling_coder",          out="hf_pack_code",          n=27, extract=False),
-    dict(name="web",      src="chinese_web_hq",      out="hf_pack_chinese_web",   n=13, extract=False),
-    dict(name="math",     src="math_zh",             out="hf_pack_math",          n=4,  extract=False),
-    dict(name="textbook", src="fineweb_edu_zh_v3",   out="hf_pack_textbook",      n=18, extract=True),
+    dict(name="code",     src="ling_coder",        out="hf_pack_code",        n=27, extract=False,
+         cap=2_500_000_000),
+    dict(name="web",      src="chinese_web_hq",    out="hf_pack_chinese_web", n=13, extract=False,
+         cap=700_000_000),
+    dict(name="textbook", src="fineweb_edu_zh_v3", out="hf_pack_textbook",    n=18, extract=True,
+         cap=400_000_000),
 ]
 
 INTERVAL = 300          # 每轮的间隔秒数
@@ -133,6 +137,8 @@ def prepare(spec) -> bool:
     cmd = [PY, "-u", "scripts/build_flat_corpus.py",
            "--tokenizer", str(TOKENIZER), "--out", str(out_dir), kind, *patterns,
            "--text-field", "auto", "--tokens-per-shard", "250000000"]
+    if spec.get("cap"):
+        cmd += ["--max-tokens", str(spec["cap"])]
     rc = subprocess.call(cmd, cwd=str(ROOT))
     if rc != 0 or not pack_ready(out_dir):
         log(f"  分词失败 rc={rc}")
