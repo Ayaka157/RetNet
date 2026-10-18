@@ -309,15 +309,26 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
             if verbose:
                 print(msg, flush=True)
 
-        def _apply_intervals(self, args) -> None:
+        def _apply_intervals(self, args, state=None) -> None:
+            """同步存档/评测节奏。
+
+            ⚠️ 必须同时改 `state.*`：`DefaultFlowCallback.on_step_end` 判断的是
+            `state.save_steps` / `state.eval_steps`（不是 `args.*`）。
+            2026-10-18 实测：只改 args 时日志里一直打印 "save_steps -> 1200"，
+            但 1,400 步过去一个 checkpoint 都没落盘 —— 因为 state 仍是构造时的 2500。
+            """
             if self.plan is None:
                 return
             if self.plan.save_steps != self._applied_save:
                 args.save_steps = self.plan.save_steps
+                if state is not None:
+                    state.save_steps = self.plan.save_steps
                 self._applied_save = self.plan.save_steps
                 self._log(f"[plan] save_steps -> {args.save_steps}")
             if self.plan.eval_steps != self._applied_eval:
                 args.eval_steps = self.plan.eval_steps
+                if state is not None:
+                    state.eval_steps = self.plan.eval_steps
                 self._applied_eval = self.plan.eval_steps
                 self._log(f"[plan] eval_steps -> {args.eval_steps}")
 
@@ -412,7 +423,7 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
             state.max_steps = plan.total_steps
             if old_max != state.max_steps:
                 self._log(f"[plan] max_steps {old_max} -> {state.max_steps}（按计划覆盖）")
-            self._apply_intervals(args)
+            self._apply_intervals(args, state)
             self._log(f"[plan] 计划 {self.watcher.path}：{len(plan.stages)} 段，"
                       f"共 {plan.total_steps} 步")
             for i, s in enumerate(plan.stages):
@@ -472,6 +483,6 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
                                        "exclude": s.exclude} for s in new.stages])
                     self._log(f"[plan] 语料阶段已更新为 {len(new.stages)} 段")
                     self._stage_logged = None
-            self._apply_intervals(args)
+            self._apply_intervals(args, state)
 
     return _PlanCallback()
