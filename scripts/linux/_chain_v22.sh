@@ -20,6 +20,12 @@ while pgrep -f "retnet_hf/train[.]py" > /dev/null; do
 done
 echo "  $(date '+%m-%d %H:%M:%S') v21 训练进程已退出"
 
+# ⚠️ 必须**立刻**停掉 v21 的守卫，不能等 v22 启动之后再停：
+#    v21 的 tripwire 是按预计完成时间挂的，很可能正好落在
+#    "v21 已退出 → v22 还没起" 这段收尾窗口里；那时它会去停一个已经不存在的训练进程。
+echo "=== 0) 停掉 v21 的守卫 ==="
+bash scripts/linux/_guard.sh stop all
+
 echo "=== 1) v21 收尾（导出 + 域内评测）==="
 bash scripts/linux/_finalize_v21.sh 2>&1 | tail -30
 
@@ -55,11 +61,13 @@ for i in $(seq 1 80); do
 done
 grep -aE "no_decay|\[plan\]|DDP:" "$LOGD/v22_ctx16k.out" | tail -5
 
-echo "=== 5) v22 守卫（8k 段约 1.3 h，留足余量）==="
+echo "=== 5) v22 守卫 ==="
+# 时间窗要**贴紧 v22 的实际时长**（约 1.25 h），否则训练跑完后实例会空转到守卫到点：
+# 4 小时的 watchdog 意味着 ¥39 的空转账单，而那时余额只剩个位数。
 bash scripts/linux/_guard.sh stop all
-bash scripts/linux/_guard.sh start deadman 2h10m
-bash scripts/linux/_guard.sh start tripwire 6600     # 1h50m
-bash scripts/linux/_guard.sh start watchdog 4
+bash scripts/linux/_guard.sh start deadman 1h50m
+bash scripts/linux/_guard.sh start tripwire 5700     # 1h35m
+bash scripts/linux/_guard.sh start watchdog 2
 
 echo "=== 6) v22 跑完后收尾 ==="
 while pgrep -f "retnet_hf/train[.]py" > /dev/null; do
@@ -67,6 +75,22 @@ while pgrep -f "retnet_hf/train[.]py" > /dev/null; do
 done
 echo "  v22 训练进程已退出，做最后核对"
 $PY -u scripts/eval_holdout.py --model checkpoints/retnet_500m_v22 \
-    --tag v22_ctx8k --batch 2 2>&1 | tail -6
+    --tag v22_ctx16k --batch 2 2>&1 | tail -8
+echo "  --- 与 ep3 基线对比 ---"
+PYBIN=$PY
+$PYBIN - <<'PYEOF'
+import json
+recs = {}
+for line in open("logs/holdout_eval.jsonl", encoding="utf-8"):
+    if line.strip():
+        r = json.loads(line)
+        recs[r["tag"]] = r
+base = recs.get("ep3_full", {}).get("loss")
+for tag in ("v21_final", "v22_ctx16k"):
+    r = recs.get(tag)
+    if r and base:
+        drop = (base - r["loss"]) / base * 100
+        print("  %-14s %.4f   降 %.1f%%" % (tag, r["loss"], drop))
+PYEOF
 df -h /root/autodl-tmp | tail -1
 echo "=== 接力链完成 ==="
