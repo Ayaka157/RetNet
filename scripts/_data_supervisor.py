@@ -18,6 +18,7 @@
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -171,8 +172,11 @@ def drop_from_manifest(src: str) -> None:
     keep = [ln for ln in MANIFEST.read_text(encoding="utf-8").splitlines()
             if ln.strip() and ln.split("\t")[1] != src]
     if len(keep) != len(MANIFEST.read_text(encoding="utf-8").splitlines()):
+        # 先杀掉下载器：它在启动时把清单读进内存，不重启就还会按旧清单继续下
+        subprocess.call(["bash", "-c", "pkill -f 'dl_parallel[.]py' || true"])
+        time.sleep(1)
         MANIFEST.write_text("\n".join(keep) + "\n", encoding="utf-8")
-        log(f"  已从下载清单移除 {src}（分词完成，不再重下）")
+        log(f"  已从下载清单移除 {src}（分词完成，不再重下，下载器将按新清单重启）")
 
 
 def release_raw(spec) -> None:
@@ -259,6 +263,13 @@ def main() -> int:
             log(f"=== {spec['name']} 下载齐全（{have}/{want}），开始分词 ===")
             if prepare(spec):
                 release_raw(spec)
+                # 分词已完成且已出清单 → 整个目录都没用了，连没下完的部分一起删。
+                # 2026-10-18 实测：只删「完整」文件会留下 2.0 GB 残缺包白占磁盘，
+                # 而且下载器重启后还会按旧清单继续往里写。
+                src_dir2 = BASE / spec["src"]
+                if src_dir2.exists():
+                    shutil.rmtree(src_dir2, ignore_errors=True)
+                    log(f"  已删除 {spec['src']} 整个目录（含未下完的部分）")
             else:
                 pending.append(f"{spec['name']} 分词未完成")
 
