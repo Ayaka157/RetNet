@@ -161,6 +161,33 @@ def release_raw(spec) -> None:
         log(f"  已清理 {spec['src']} 原始包，释放 {freed / 1e9:.2f} GB")
 
 
+def downloader_running() -> bool:
+    """curl 下载器是否活着（用 ps 查，不依赖 pid 文件）。"""
+    try:
+        out = subprocess.check_output(["bash", "-c",
+            "ps -eo args | grep -c '[s]cripts/linux/_curl_download.sh'"], text=True, timeout=10)
+        return int(out.strip() or 0) > 0
+    except Exception:                                          # noqa: BLE001
+        return False
+
+
+def ensure_downloader() -> None:
+    """没在下载就拉起来。
+
+    为什么需要：curl 一轮只按清单顺序走一遍，**不会回头**；而监督器先前把
+    半成品删掉过（已修），也可能有网络中断导致某轮提前退出。没有这一层，
+    缺的文件就永远补不回来。
+    """
+    if downloader_running():
+        return
+    log("  下载器未运行，重新拉起")
+    subprocess.Popen(["bash", "scripts/linux/_curl_download.sh"],
+                     cwd=str(ROOT),
+                     stdout=open(ROOT / "logs/linux/curl_dl.out", "a"),
+                     stderr=subprocess.STDOUT,
+                     start_new_session=True)
+
+
 def main() -> int:
     log(f"数据监督器启动；每 {INTERVAL}s 一轮，最多 {MAX_ROUNDS} 轮")
     for rnd in range(1, MAX_ROUNDS + 1):
@@ -189,6 +216,7 @@ def main() -> int:
         if not pending:
             log("全部语料已就绪")
             return 0
+        ensure_downloader()      # 自愈：下载器挂了就重拉
         time.sleep(INTERVAL)
     log("达到最大轮数，退出")
     return 1
