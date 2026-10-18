@@ -254,7 +254,11 @@ def main() -> int:
             local_full = f"data/hf/{spec['src']}"
             have_b, want_b, have, want = check_and_clean(
                 man, local_full.replace("data/hf/", ""))
+            # ⚠️ 不能超过数据集本身的体积：textbook 全量只有 0.28 GB，
+            #    而 need_gb 写的是 0.4（按 cap 反推），永远凑不够 → 它永远不分词。
             need_b = spec.get("need_gb", 0) * 1e9
+            if want_b:
+                need_b = min(need_b, want_b)
             enough = have_b >= need_b if need_b else have == want
             if not enough:
                 pending.append(f"{spec['name']} {have}/{want} "
