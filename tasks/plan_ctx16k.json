@@ -1,16 +1,16 @@
 {
   "plan_version": 1,
-  "seq_len": 8192,
+  "seq_len": 16384,
   "min_free_gb": 6,
   "stages": [
     {
-      "name": "ctx8k",
+      "name": "ctx16k",
       "data_dir": "data_cache/hf_pack_code2",
       "mode": "flat",
       "min_shards": 10,
-      "steps": 7630,
+      "steps": 7629,
       "gc": false,
-      "_note": "0.5B token 长上下文继续预训练；flat 分片按 8193 宽重切"
+      "_note": "0.5B token 长上下文继续预训练；flat 分片按 16385 宽重切"
     }
   ],
   "lr": {
@@ -21,5 +21,5 @@
   "save_steps": 2000,
   "eval_steps": 2000,
   "val_dir": "data_cache/chat_pack_v13",
-  "notes": "v22：8k 上下文扩展。步数 = 0.5B / (4x8192x2卡) = 7,630"
+  "notes": "v22：16K 上下文扩展。显存 = 4.70 GiB + 2.23 MiB x (2x16384) = 76.1 GiB，与 v21 的 32,768 token/卡 相同，所以吞吐不变（约 110k tok/s）。"
 }
