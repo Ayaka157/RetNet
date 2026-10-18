@@ -78,6 +78,8 @@ DEFAULTS = {
     "load_best": True,
     "auto_restart_max": 0,
     "restart_wait_min": 10,
+    "nproc": 1,              # >1 时走 torch.distributed.run（多卡 DDP）
+    "master_port": 29500,
     "train_script": "retnet_hf/train.py",  # override for forks (e.g. retnet_hf_fp16/train.py)
 }
 
@@ -178,8 +180,20 @@ def build_cmd_full(cfg):
     cmd += ["--grad_accum", str(cfg.get("grad_accum", 1))]
     if cfg.get("optim"):
         cmd += ["--optim", str(cfg["optim"])]
+    if cfg.get("ddp_find_unused_parameters"):
+        cmd.append("--ddp_find_unused_parameters")
     if cfg["resume"]:
         cmd.append("--resume")
+    # 多卡：用 torch.distributed.run 包一层，train.py 本身不用改入口。
+    # ⚠️ batch_size 是**每张卡**的：2 卡 × batch 8 = 单卡 batch 16 的等效批量，
+    #    所以切到多卡时要把 batch_size 减半、steps 不变（LR/评测节奏也不变）。
+    nproc = int(cfg.get("nproc", 1) or 1)
+    if nproc > 1:
+        script, rest = cmd[1], cmd[2:]
+        cmd = [sys.executable, "-m", "torch.distributed.run",
+               "--nproc_per_node", str(nproc),
+               "--master_port", str(cfg.get("master_port", 29500)),
+               script] + rest
     return cmd
 
 

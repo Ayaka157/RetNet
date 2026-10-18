@@ -231,6 +231,9 @@ def main():
     ap.add_argument("--optim", default=None,
                     help="TrainingArguments.optim；"
                          "adamw_bnb_8bit 省 1.5 GiB 优化器状态（关检查点的前提）")
+    ap.add_argument("--ddp_find_unused_parameters", action="store_true",
+                    help="多卡 DDP 时允许存在未被使用的参数。本模型的 growth 张量里有一批"
+                         "gamma=0 的仿射项，先试默认 False；报 unused parameter 时加这个开关")
     args = ap.parse_args()
 
     model_dir = Path(args.model_dir)
@@ -321,6 +324,13 @@ def main():
     if args.optim:
         training_args.optim = args.optim
         print(f"optimizer: {args.optim}", flush=True)
+    if args.ddp_find_unused_parameters:
+        # transformers 4.46 起把开关改名成 *_true（旧名已弃用）
+        if hasattr(training_args, "ddp_find_unused_parameters_true"):
+            training_args.ddp_find_unused_parameters_true = True
+        else:                                                   # pragma: no cover
+            training_args.ddp_find_unused_parameters = True
+        print("DDP: find_unused_parameters = True", flush=True)
     if args.grad_accum > 1:
         print(f"gradient accumulation: {args.grad_accum} "
               f"(等效 batch {args.batch_size * args.grad_accum})", flush=True)
@@ -439,8 +449,12 @@ def main():
 
     trainer.train(resume_from_checkpoint=resume_arg)
     trainer.save_model(args.output_dir)
-    verify_export(args.output_dir)
-    print("TRAINING DONE", flush=True)
+    # 多卡 DDP 下每个 rank 都会走到这里：导出校验与 TRAINING DONE 只能由 rank 0 做，
+    # 否则两个进程同时读写同一批文件，且日志里会出现两条 TRAINING DONE，
+    # 让 watchdog/收尾脚本的分辨逻辑变得含糊。
+    if trainer.is_world_process_zero():
+        verify_export(args.output_dir)
+        print("TRAINING DONE", flush=True)
 
 
 if __name__ == "__main__":
