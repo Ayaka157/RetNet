@@ -42,8 +42,10 @@ SPECS = [
          cap=2_500_000_000, need_gb=2.0),
     dict(name="web",      src="chinese_web_hq",    out="hf_pack_chinese_web", n=13, extract=False,
          cap=700_000_000,   need_gb=0.64),
+    # textbook 解压出 696,600 个文件，其中 2/3 是 stats.json（非文本），
+    # 不跳过会被算成 66% 错误率，触发分词脚本自带的「错误率 > 1% 判失败」守卫。
     dict(name="textbook", src="fineweb_edu_zh_v3", out="hf_pack_textbook",    n=18, extract=True,
-         cap=400_000_000,   need_gb=0.36),
+         cap=400_000_000,   need_gb=0.36, skip="stats.json"),
 ]
 
 INTERVAL = 300          # 每轮的间隔秒数
@@ -150,6 +152,8 @@ def prepare(spec) -> bool:
            "--text-field", "auto", "--tokens-per-shard", "250000000"]
     if spec.get("cap"):
         cmd += ["--max-tokens", str(spec["cap"])]
+    if spec.get("skip"):
+        cmd += ["--skip", spec["skip"]]
     rc = subprocess.call(cmd, cwd=str(ROOT))
     if rc != 0 or not pack_ready(out_dir):
         log(f"  分词失败 rc={rc}")

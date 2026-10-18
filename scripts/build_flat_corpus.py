@@ -52,7 +52,7 @@ def log(msg: str) -> None:
     print(msg, flush=True)
 
 
-def iter_records(patterns, kind: str):
+def iter_records(patterns, kind: str, skip=()):
     """按文件顺序产出 dict 记录。
 
     **打不开的文件跳过**：下载器可能正在写某个 parquet，footer 还没落盘，
@@ -62,6 +62,11 @@ def iter_records(patterns, kind: str):
     files = []
     for pat in patterns:
         files.extend(sorted(glob.glob(pat, recursive=True)))
+    if skip:
+        n0 = len(files)
+        files = [f for f in files if not any(k in os.path.basename(f) for k in skip)]
+        if len(files) != n0:
+            log(f"[input] 跳过 {n0 - len(files)} 个非文本文件（匹配 {skip}）")
     if not files:
         raise SystemExit(f"没有匹配到任何输入文件：{patterns}")
     log(f"[input] {len(files)} 个文件")
@@ -168,6 +173,8 @@ def main(argv=None) -> int:
     ap.add_argument("--tokens-per-shard", type=int, default=250_000_000,
                     help="每个分片的 token 数（默认 2.5e8 ≈ 500 MB int16）")
     ap.add_argument("--limit-records", type=int, default=0, help="只用前 N 条（调试）")
+    ap.add_argument("--skip", default="",
+                    help="逗号分隔的文件名关键字，命中的文件跳过（如 stats.json）")
     ap.add_argument("--max-tokens", type=int, default=0,
                     help="产出达到 N token 就停（0=不限）。计划只需要一部分语料时用它省时间省磁盘")
     ap.add_argument("--add-eos", action="store_true",
@@ -217,6 +224,7 @@ def main(argv=None) -> int:
         log(f"[fields] auto 选中（来自 {os.path.basename(first)}）: {fields}")
     else:
         fields = [x.strip() for x in args.text_field.split(",") if x.strip()]
+    skip_names = tuple(x.strip() for x in args.skip.split(",") if x.strip())
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("shard_*.npy"):
@@ -244,7 +252,7 @@ def main(argv=None) -> int:
         shard_idx += 1
         buf = []
 
-    for rec in iter_records(patterns, kind):
+    for rec in iter_records(patterns, kind, skip=skip_names):
         seen += 1
         if args.limit_records and seen > args.limit_records:
             break
