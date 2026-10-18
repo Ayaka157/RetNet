@@ -165,7 +165,7 @@ def downloader_running() -> bool:
     """curl 下载器是否活着（用 ps 查，不依赖 pid 文件）。"""
     try:
         out = subprocess.check_output(["bash", "-c",
-            "ps -eo args | grep -c '[s]cripts/linux/_curl_download.sh'"], text=True, timeout=10)
+            "ps -eo args | grep -c '[s]cripts/linux/_dl_parallel.py'"], text=True, timeout=10)
         return int(out.strip() or 0) > 0
     except Exception:                                          # noqa: BLE001
         return False
@@ -181,9 +181,11 @@ def ensure_downloader() -> None:
     if downloader_running():
         return
     log("  下载器未运行，重新拉起")
-    subprocess.Popen(["bash", "scripts/linux/_curl_download.sh"],
+    # 并行版：hf-mirror 镜像 + 6 路并发。顺序 curl 在抖动代理下只有 5 KB/s-1.6 MB/s，
+    # 并行 6 路实测合计 2.6 MB/s，13 GB 从十几小时缩到约 1.5 h。
+    subprocess.Popen([PY, "-u", "scripts/linux/_dl_parallel.py"],
                      cwd=str(ROOT),
-                     stdout=open(ROOT / "logs/linux/curl_dl.out", "a"),
+                     stdout=open(ROOT / "logs/linux/dl_parallel.out", "a"),
                      stderr=subprocess.STDOUT,
                      start_new_session=True)
 
