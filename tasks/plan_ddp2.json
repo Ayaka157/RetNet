@@ -14,9 +14,10 @@
     "  先从代码段减。若实测比 1.30 it/s 快，可热加载把 code_ling 的 steps 改回来。",
     "【2026-10-18 热更新】实测 DDP 稳态 1.69 it/s（关掉 find_unused_parameters 后从 1.30 提上来），同预算可多跑 30% 步数，全部加给代码段（13,500 -> 31,545）。total_steps 从 60,955 涨到 78,999，余弦被拉长；当前还在 warmup 末端，LR 变化可忽略。",
     "【2026-10-18 16:30 热更新】实测 1.69 it/s；按“剩余时间 x 速率 - eval 开销”精算，79,000 步会跑到 03:38 撞上死手(03:26)，收敛到 76,000 步可于 03:07 完成并让余弦走完。code 段 31,545 -> 28,545。",
-    "【2026-10-18 19:35 扩计划】用户追加预算到 ¥290.30，目标 20 tok/param。在 textbook 与 anneal 之间插入 code_ling2 段 72,000 步（4.72B token）。长跑有效速率按实测 1.607 it/s（含 eval）算，148,000 步约 25.8 h，13:38 开训 -> 次日 15:20，花费约 ¥359，余额余约 ¥10。"
+    "【2026-10-18 19:35 扩计划】用户追加预算到 ¥290.30，目标 20 tok/param。在 textbook 与 anneal 之间插入 code_ling2 段 72,000 步（4.72B token）。长跑有效速率按实测 1.607 it/s（含 eval）算，148,000 步约 25.8 h，13:38 开训 -> 次日 15:20，花费约 ¥359，余额余约 ¥10。",
+    "【2026-10-18 19:50 定稿】用户要求\"跑满预算 + 预留微调，新旧数据混合\"。尾部：code_ling2 68,557 步 -> sft_mix 14,000 步（新旧混合 SFT）。总 152,557 步，按 1.607 it/s 约 20.6 h，次日 16:30 完成，余约 ¥24。唯一 token 约 10.0B = 19.8 tok/param（差 0.2 是代码语料总量的硬上限）。"
   ],
-  "plan_version": 9,
+  "plan_version": 10,
   "seq_len": 2048,
   "min_free_gb": 10,
   "stages": [
@@ -64,17 +65,17 @@
       "data_dir": "data_cache/hf_pack_code2",
       "mode": "flat",
       "min_shards": 10,
-      "steps": 72000,
+      "steps": 68557,
       "gc": true,
-      "_note": "Ling-Coder 剩余分片（去重后约 4.7B token），用于把唯一 token 推到 ~19.6/参数"
+      "_note": "Ling-Coder 剩余分片，约 4.49B 新 token（占总新增唯一 token 的主体）"
     },
     {
-      "name": "chat_anneal",
-      "data_dir": "data_cache/chat_pack_v13",
+      "name": "sft_mix",
+      "data_dir": "data_cache/hf_pack_sft",
       "mode": "packed",
-      "steps": 6000,
+      "steps": 14000,
       "gc": false,
-      "_note": "对话退火 6,000 步 = 0.39B token（约 0.71 个 epoch）；2,500 步只有 0.13 epoch，实测 chat-val 从 1.95 掉到 3.05 后拉不回来"
+      "_note": "新旧混合 SFT：旧对话 40% + 代码 35% + 教材 15% + 数学 10%；保留对话的 reply/prompt 掩码，每个 batch 都同时看到新旧分布"
     }
   ],
   "lr": {

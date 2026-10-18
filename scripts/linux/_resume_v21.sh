@@ -75,11 +75,17 @@ bash scripts/linux/_guard.sh start deadman 20h40m
 bash scripts/linux/_guard.sh start tripwire 71928     # 19h58m
 bash scripts/linux/_guard.sh start watchdog 24
 
-echo "=== 6) 数据监督器（code_ling2 还需要 hf_pack_code2）==="
+echo "=== 6) code_ling2 的数据（不能交给监督器）==="
+# ⚠️ 不能拉 `_data_supervisor.py`：它看到 hf_pack_code 已就绪，会把
+#    data/hf/ling_coder 整个目录**删掉**（那是 code_ling2 的原料）。
+#    所以这里只拉下载器，分词等下载完手工跑。
 if [ ! -d data_cache/hf_pack_code2 ]; then
   source /etc/network_turbo >/dev/null 2>&1
-  setsid nohup "$PY" -u scripts/_data_supervisor.py > logs/linux/data_supervisor.out 2>&1 < /dev/null &
-  echo "  已拉起监督器（准备 code_ling2）"
+  if ! pgrep -f "dl_parallel[.]py" >/dev/null; then
+    JOBS=12 setsid nohup "$PY" -u scripts/linux/_dl_parallel.py \
+      > logs/linux/dl_ext.out 2>&1 < /dev/null &
+    echo "  已拉起下载器（ling_coder 剩余分片）"
+  fi
 else
   echo "  hf_pack_code2 已存在"
 fi
