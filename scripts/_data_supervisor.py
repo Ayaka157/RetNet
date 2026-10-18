@@ -70,11 +70,15 @@ def check_and_clean(man: dict[str, list[tuple[str, int]]], local: str):
         p = BASE / local / fname
         if not p.exists():
             continue
-        if p.stat().st_size == want:
+        size = p.stat().st_size
+        if size == want:
             have += 1
-        else:
-            log(f"  删除损坏文件 {local}/{fname} "
-                f"(have={p.stat().st_size} want={want})")
+        elif size > want:
+            # 只有**比期望还大**才是确定损坏：snapshot_download 写了一半的文件
+            # 会让 curl -C - 从错误偏移续写，多出来一截。
+            # 比期望**小**说明还在下载中，绝不能删 —— 删了它 curl 就得从头再来，
+            # 两边每 5 分钟互相打架，永远下不完（2026-10-18 实测踩过）。
+            log(f"  删除损坏文件（超大）{local}/{fname} (have={size} want={want})")
             p.unlink()
     return have == len(files), have, len(files)
 

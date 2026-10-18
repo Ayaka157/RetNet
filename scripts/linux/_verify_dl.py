@@ -33,10 +33,12 @@ for local, fname, want in rows:
     have = p.stat().st_size
     if have == want:
         ok += 1
-    else:
+    elif have > want:
         bad += 1
         deleted.append((str(p.relative_to(ROOT)), have, want))
         p.unlink()
+    else:
+        missing += 1      # 比期望小 = 还在下载中，保留让 curl 续传
 
 print(f"清单 {len(rows)} 个文件：完整 {ok} / 缺失 {missing} / 不符 {bad}")
 for d, have, want in deleted:
