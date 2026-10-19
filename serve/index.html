@@ -83,6 +83,45 @@
   .foot{margin-top:7px;display:flex;gap:12px;align-items:center;color:var(--muted);
     font-size:12px;flex-wrap:wrap;min-height:18px}
   .foot .spacer{flex:1}
+  /* ---------- 手机版 ---------- */
+  .note{grid-column:1/-1;color:var(--muted);font-size:11.5px;line-height:1.55;
+    padding:7px 9px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+  .note b{color:var(--warn);font-weight:600}
+
+  @media (max-width: 640px){
+    body{font-size:14.5px}
+    header{padding:9px 12px;gap:8px}
+    header h1{font-size:14px}
+    .stat{font-size:11px}
+    /* 触摸目标不小于 40px，否则手机上容易点歪 */
+    button{padding:9px 13px;font-size:13.5px;min-height:40px}
+    main{padding:12px 12px 6px}
+    .msg{gap:8px;margin-bottom:14px}
+    .msg .who{flex:0 0 auto;min-width:32px;font-size:11px}
+    footer{padding:8px 12px calc(10px + env(safe-area-inset-bottom))}
+    #settings{grid-template-columns:1fr;gap:10px;padding:10px}
+    #settings .wide{grid-column:auto}
+    /* iOS 上 font-size < 16px 会在聚焦时自动放大页面 */
+    input,select,textarea{font-size:16px}
+    textarea{min-height:52px}
+    .row{gap:6px}
+    #btnSend,#btnStop{min-width:62px}
+    .presets button{padding:7px 11px;font-size:12.5px;min-height:38px}
+    .foot{font-size:11.5px;gap:8px}
+    .hint{font-size:12.5px;margin:16px 0}
+    .thinkbox .tx,details.think .tx{font-size:12.5px}
+  }
+  /* 极窄屏：标题让位给状态与按钮，避免 header 挤成两行 */
+  @media (max-width: 400px){
+    header h1{display:none}
+    main{padding:10px 10px 6px}
+  }
+  /* 横屏矮屏：压缩底部占位，把空间留给对话 */
+  @media (max-height: 480px) and (orientation: landscape){
+    main{padding-top:8px}
+    footer{padding:6px 12px}
+    .hint{margin:8px 0}
+  }
 </style>
 </head>
 <body>
@@ -122,8 +161,13 @@
           <option value="512">512（最快，记不住前面）</option>
           <option value="1024">1024</option>
           <option value="1536">1536</option>
-          <option value="2048" selected>2048（模型窗口上限）</option>
+          <option value="2048" selected>2048（训练窗口上限）</option>
         </select>
+        <div class="note">
+          训练窗口就是 <b>2048</b>，没有更大的版本（16K 扩展尝试过但没跑成）。
+          而且这个模型的衰减参数被训练中的 weight decay 压小了，<b>实际有效记忆只有约 500 token</b>——
+          调大这个值不会让它记得更多。
+        </div>
       </label>
       <label>温度 temperature <input type="number" id="temperature" value="0.7" step="0.05" min="0.05" max="1.5"></label>
       <label>top_p <input type="number" id="top_p" value="0.9" step="0.05" min="0.05" max="1"></label>
