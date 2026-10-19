@@ -4,13 +4,13 @@
   "min_free_gb": 6,
   "stages": [
     {
-      "name": "ctx16k",
-      "data_dir": "data_cache/hf_pack_code2",
+      "name": "ctx16k_mix",
+      "data_dir": "data_cache/hf_pack_ctx16k",
       "mode": "flat",
-      "min_shards": 10,
+      "min_shards": 1,
       "steps": 7629,
       "gc": false,
-      "_note": "0.5B token 长上下文继续预训练；flat 分片按 16385 宽重切"
+      "_note": "v22 16K 上下文扩展用**混合包**（code2 60% + sft 25% + math 10% + prog 5%），不是纯代码：刚跑完 68,557 步代码，纯代码扩展会进一步推向代码、把 SFT 段刚恢复的对话能力推远。混 25% 对话可以边学长窗口边锁住分布。"
     }
   ],
   "lr": {
@@ -21,5 +21,9 @@
   "save_steps": 2000,
   "eval_steps": 2000,
   "val_dir": "data_cache/chat_pack_v13",
-  "notes": "v22：16K 上下文扩展。显存 = 4.70 GiB + 2.23 MiB x (2x16384) = 76.1 GiB，与 v21 的 32,768 token/卡 相同，所以吞吐不变（约 110k tok/s）。"
+  "notes": "v22：16K 上下文扩展。显存 = 4.70 GiB + 2.23 MiB x (2x16384) = 76.1 GiB，与 v21 的 32,768 token/卡 相同，所以吞吐不变（约 110k tok/s）。",
+  "_readme": [
+    "v22：16K 长上下文扩展。训练序列由 flat 分片按 16385 宽重切，所以换宽度不需要重新分词。",
+    "数据：data_cache/hf_pack_ctx16k（0.5B token 混合包，见 build_ctx_mix.py）。"
+  ]
 }
