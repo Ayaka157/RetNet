@@ -2,7 +2,7 @@
 
     # 启动（用 AI 环境，见 serve/DEPLOY.md）
     C:\\Tools\\Miniconda3\\envs\\AI\\python.exe serve\\retnet_play_server.py \\
-        --model_dir checkpoints/retnet_500m_v15b_ep3 --port 8077 --dtype bf16 --root_path /play
+        --model_dir checkpoints/retnet_500m_v21_export --port 8077 --dtype bf16 --root_path /play
 
 访问：``http://127.0.0.1:8077/play/``（公网经 cloudflared 隧道映射到 ``your-demo-host.example/play/``）
 
@@ -361,7 +361,7 @@ def index():
 def main() -> None:
     global ARGS
     ap = argparse.ArgumentParser(description="RetNet 0.5B 聊天服务")
-    ap.add_argument("--model_dir", default="checkpoints/retnet_500m_v15b_ep3")
+    ap.add_argument("--model_dir", default="checkpoints/retnet_500m_v21_export")
     ap.add_argument("--tokenizer", default=str(ROOT / "data_cache/chat_pack_v13/bpe_tokenizer.json"))
     ap.add_argument("--host", default="127.0.0.1", help="默认只监听本机；公网走 cloudflared 隧道")
     ap.add_argument("--port", type=int, default=8077)

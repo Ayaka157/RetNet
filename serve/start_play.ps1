@@ -11,7 +11,7 @@ RetNet 试玩服务 · 一键启停（后端 + Cloudflare 连接器 + 可选临�
   .\serve\start_play.ps1 -NoTunnel        # 只起后端
   .\serve\start_play.ps1 -Token "口令"     # 开分享口令
 
-可选：-Port 8077  -Model checkpoints/retnet_500m_v15b_ep3  -Dtype bf16  -RootPath /play  -Workers 1
+可选：-Port 8077  -Model checkpoints/retnet_500m_v21_export  -Dtype bf16  -RootPath /play  -Workers 1
       -TunnelTokenFile <路径>  -PublicHost <域名>
 
 cloudflared 走 PATH 查找（`Get-Command`），拿不到就退到当前目录里的同名文件。
@@ -34,7 +34,7 @@ cloudflared 走 PATH 查找（`Get-Command`），拿不到就退到当前目录�
 #>
 param(
   [int]$Port = 8077,
-  [string]$Model = "checkpoints/retnet_500m_v15b_ep3",
+  [string]$Model = "checkpoints/retnet_500m_v21_export",
   [string]$Dtype = "bf16",
   [string]$RootPath = "/play",
   [string]$Token = "",
