@@ -94,6 +94,15 @@ for tag in ("v21_final", "v22_ctx16k"):
 PYEOF
 df -h /root/autodl-tmp | tail -1
 
+# 生成样本：这是"能不能聊天"唯一的直接证据。
+# 成本约 3 分钟（GPU 已空），必须排在关机之前。
+echo "=== 7) 生成采样（约 3 分钟）==="
+for M in checkpoints/retnet_500m_v21 checkpoints/retnet_500m_v22; do
+  [ -d "$M" ] || continue
+  TAG=$(basename "$M" | sed 's/retnet_500m_//')
+  timeout 600 $PY -u scripts/gen_samples.py --model "$M" --tag "${TAG}_final" 2>&1 | tail -8
+done
+
 # 最后再导一次完整日志（防止归档器没赶上）
 $PY -u scripts/export_full_curves.py 2>/dev/null | tail -3 || true
 
