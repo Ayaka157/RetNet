@@ -11,6 +11,13 @@
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path as _P
+# 从 scripts/ 下运行时，仓库根不在 sys.path 里，补上
+_ROOT = _P(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 import argparse
 import time
 from pathlib import Path

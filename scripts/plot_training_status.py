@@ -54,7 +54,9 @@ base = hold.get("ep3_full", {}).get("loss")
 pts = []
 if base:
     pts.append((0, base))
-for tag, step in (("v21_step15000", 15000), ("v21_step17500", 17500)):
+# 注意 tag 与步数的对应：v21_final 是在 159,857 步（训练结束）测的
+for tag, step in (("v21_step15000", 15000), ("v21_step17500", 17500),
+                  ("v21_final", 159857)):
     if tag in hold:
         pts.append((step, hold[tag]["loss"]))
 pts.sort()
@@ -71,7 +73,7 @@ total = acc
 
 # ---------------------------------------------------------------- 画图
 fig, axes = plt.subplots(2, 2, figsize=(15, 9))
-fig.suptitle(f"RetNet-0.5B v21 训练状态（{total:,} 步计划，实时）", fontsize=15, fontweight="bold")
+fig.suptitle(f"RetNet-0.5B v21 完整训练曲线（{total:,} 步）", fontsize=15, fontweight="bold")
 
 # (a) 训练 loss
 ax = axes[0, 0]
@@ -105,7 +107,7 @@ for b, name in bounds:
         ax.text(b, ax.get_ylim()[1], name.replace("_", "\n"), fontsize=6.5,
                 rotation=90, va="top", ha="right", color="#d93025")
 ax.set_xlim(0, cur * 1.02)      # 不把横轴撑到未来的阶段
-ax.set_title(f"(a) 训练 loss（按阶段着色，对数轴；已到 {cur:,} / {total:,} 步）", fontsize=10)
+ax.set_title(f"(a) 训练 loss（按语料阶段着色，对数轴；{cur:,} / {total:,} 步已跑完）", fontsize=10)
 ax.set_xlabel("step"); ax.set_ylabel("loss（对数）")
 ax.grid(alpha=0.25, which="both"); ax.legend(fontsize=7, loc="lower left", ncol=2)
 
@@ -121,7 +123,7 @@ if pts:
                    label=f"成功阈值 = -10% ({base * 0.9:.4f})")
         ax.axhline(base, color="#5f6368", ls=":", lw=1, label=f"ep3 基线 {base:.4f}")
 ax.set_title("(b) 域内 held-out loss（真正的判据）", fontsize=11)
-ax.set_xlabel("step"); ax.set_ylabel("loss"); ax.set_xlim(-500, 20000)
+ax.set_xlabel("step"); ax.set_ylabel("loss"); ax.set_xlim(-3000, 168000)
 ax.grid(alpha=0.25); ax.legend(fontsize=8)
 
 # (c) chat 验证集
