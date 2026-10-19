@@ -62,12 +62,13 @@ done
 grep -aE "no_decay|\[plan\]|DDP:" "$LOGD/v22_ctx16k.out" | tail -5
 
 echo "=== 5) v22 守卫 ==="
-# 时间窗要**贴紧 v22 的实际时长**（约 1.25 h），否则训练跑完后实例会空转到守卫到点：
-# 4 小时的 watchdog 意味着 ¥39 的空转账单，而那时余额只剩个位数。
+# 时间窗必须贴紧 v22 的实际时长（约 1.25 h），否则训练跑完后实例会空转到守卫到点。
+# 09:14 实测余额 ¥145.05 → 硬上限 19:37；v22 预计 19:04 结束、评测到 19:15，
+# 所以守卫都卡在 19:20 之后一点点，并且下面评测完**主动关机**，不留空转。
 bash scripts/linux/_guard.sh stop all
-bash scripts/linux/_guard.sh start deadman 1h50m
-bash scripts/linux/_guard.sh start tripwire 5700     # 1h35m
-bash scripts/linux/_guard.sh start watchdog 2
+bash scripts/linux/_guard.sh start deadman 1h30m
+bash scripts/linux/_guard.sh start tripwire 5100     # 1h25m
+bash scripts/linux/_guard.sh start watchdog 100m
 
 echo "=== 6) v22 跑完后收尾 ==="
 while pgrep -f "retnet_hf/train[.]py" > /dev/null; do
@@ -77,8 +78,7 @@ echo "  v22 训练进程已退出，做最后核对"
 $PY -u scripts/eval_holdout.py --model checkpoints/retnet_500m_v22 \
     --tag v22_ctx16k --batch 2 2>&1 | tail -8
 echo "  --- 与 ep3 基线对比 ---"
-PYBIN=$PY
-$PYBIN - <<'PYEOF'
+$PY - <<'PYEOF'
 import json
 recs = {}
 for line in open("logs/holdout_eval.jsonl", encoding="utf-8"):
@@ -93,4 +93,12 @@ for tag in ("v21_final", "v22_ctx16k"):
         print("  %-14s %.4f   降 %.1f%%" % (tag, r["loss"], drop))
 PYEOF
 df -h /root/autodl-tmp | tail -1
-echo "=== 接力链完成 ==="
+
+# 最后再导一次完整日志（防止归档器没赶上）
+$PY -u scripts/export_full_curves.py 2>/dev/null | tail -3 || true
+
+echo "=== 接力链完成，2 分钟后关机 ==="
+bash scripts/linux/_guard.sh stop all
+sleep 120
+sync
+/usr/bin/shutdown -h now
