@@ -24,8 +24,10 @@ plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
 # ---------------------------------------------------------------- 读数据
+# 完整历史来自 checkpoint 的 trainer_state.json（log_history），
+# 比 .out 日志更完整：日志在续训时只从 32,520 步开始，而 log_history 从第 20 步就有。
 train_step, train_loss = [], []
-with open(ROOT / "logs/train_curve.csv", encoding="utf-8") as f:
+with open(ROOT / "logs/curves/full_history.csv", encoding="utf-8") as f:
     for r in csv.DictReader(f):
         if r["loss"]:
             train_step.append(int(r["step"]))
@@ -34,7 +36,7 @@ train_step = np.array(train_step)
 train_loss = np.array(train_loss)
 
 eval_step, eval_loss = [], []
-with open(ROOT / "logs/eval_curve.csv", encoding="utf-8") as f:
+with open(ROOT / "logs/curves/full_history.csv", encoding="utf-8") as f:
     for r in csv.DictReader(f):
         if r["eval_loss"]:
             eval_step.append(int(r["step"]))
@@ -65,8 +67,7 @@ for s in plan["stages"]:
 total = acc
 
 # 早前那段（step 0..32,500）的日志被 resume 覆盖了，用当时健康检查记录的分段均值重建
-early_loss = [3.59, 3.20, 3.11, 3.06, 3.03, 3.00, 2.98, 2.95, 2.93, 2.92]
-early_step = np.linspace(0, 31132, len(early_loss))
+# 不再需要重建：log_history 从第 20 步起就是真实记录
 
 # ---------------------------------------------------------------- 画图
 fig, axes = plt.subplots(2, 2, figsize=(15, 9))
@@ -74,8 +75,7 @@ fig.suptitle(f"RetNet-0.5B v21 训练状态（{total:,} 步计划，实时）", 
 
 # (a) 训练 loss
 ax = axes[0, 0]
-ax.plot(early_step, early_loss, "o--", color="#9aa0a6", ms=4,
-        label="早期分段均值（原日志已被覆盖，重建）")
+
 # 按阶段着色：代码段 loss 只有 0.8 左右，混在一起会把预训练段压扁
 edges = [0] + [b for b, _ in bounds]
 colors = ["#1a73e8", "#188038", "#ea8600", "#a142f4", "#d93025", "#12b5cb", "#f439a0"]
@@ -97,7 +97,7 @@ for si in range(len(edges) - 1):
                 label=(name if name not in labelled else None))
         labelled.add(name)
 ax.set_yscale("log")
-ax.set_ylim(0.7, 4.0)
+ax.set_ylim(0.4, 4.2)
 cur = int(train_step[-1]) if len(train_step) else total
 for b, name in bounds:
     if b <= cur * 1.02:
