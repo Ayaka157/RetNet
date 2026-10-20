@@ -16,10 +16,10 @@
     01_训练代码逐函数解释.md     83 个函数，代码段由 AST 抽取，逐条标注 00 编号
     02_续训恢复计划_220元.md     ¥220 预算下的恢复计划（附父 Agent 审核注记）
   code/
-    retnet_hf/*.py             训练/模型/数据/内核完整包
+    retnet_hf/*.py             训练/模型/数据/计划/内核完整包
     run_task.py                任务入口
     scripts/                   生长、建包、重初始化、评测、生成器
-    tests/*.py                 19 个测试文件（41 个 pytest 用例 + 2 个脚本式测试）
+    tests/*.py                 22 个测试文件（52 个 pytest 用例 + 2 个脚本式测试）
   configs/tasks/               上一轮实际配置，仅作对照
 ```
 
@@ -31,7 +31,10 @@
 | 默认值/注释 | E05（默认值 + 测试）、E07（只改注释）、E15（关闭自动选优） | 已落地 |
 | 文档订正 | N02（gamma 口径）、N03（层宽 1024） | 无代码改动，理由写在 00F1 |
 
-E23 是流程缺口：原来 11 个测试没有一个检查梯度，现在补了 6 个“改回旧行为就会红”的测试。
+对应测试：`test_growth_trainable`（E01–E04）、`test_no_decay_1d`（E06）、`test_live_params`（E08）、
+`test_build_scripts`（E09/E10/E11）、`test_eos_present`（E12）、`test_plan_gc`（E13）、
+`test_val_disjoint`（E14）、`test_train_config_guards`（E15/E17）、`test_parallel_chunkwise_equiv`（E16）、
+`test_plan_reschedule`（E18）、`test_regressions_extra`（E19/E20/E21/E22）、`test_growth_trainable` 的反例（E23）。
 
 ## 怎么复核
 
@@ -56,13 +59,16 @@ python verify.py
 ## 测试
 
 ```powershell
-python -m pytest tests -q          # 41 passed
+python -m pytest tests -q          # 52 passed
 python tests/test_plan_gc.py       # 全部通过
 python tests/test_plan_pipeline.py # 全部通过
 ```
 
 本机（RTX 3070 / Python 3.13 / torch 2.10）与远端笔记本
 （192.168.31.23，C:\Ayaka\RetNet，4070 Laptop / Python 3.11 / torch 2.11）均已跑通。
+
+注：`test_build_scripts.py` 需要 `data_cache/chat_pack_v13/bpe_tokenizer.json`，
+远端 clone 没有该文件（被 gitignore），该文件里的 4 个用例会**显式 skip**，不是假通过。
 
 ## 注意
 

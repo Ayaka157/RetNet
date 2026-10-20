@@ -246,6 +246,29 @@ class PlanWatcher:
 
 # --------------------------------------------------------------------- 回调
 
+def should_accept_reschedule(old: "Plan", new: "Plan", step: int,
+                             threshold: float = 1.02) -> tuple[bool, float, float]:
+    """判断一次 total_steps 变更是否该被接受（docs/00 E18）。
+
+    返回 (accept, lr_old, lr_new)。规则：
+      * total_steps 没变 -> 接受；
+      * 新计划显式写了 allow_reschedule=True -> 接受；
+      * 当前步的新 LR 没有比旧 LR 高过 threshold（默认 2%）-> 接受（往下掉是安全的）；
+      * 其余情况（延长预算把 LR 抬回去）-> 拒绝，保留旧计划。
+    这个判定被抽成纯函数，是为了让测试能直接构造两个 Plan 验证边界，
+    而不必启动一个 Trainer。
+    """
+    lr_old = old.lr_at(step)
+    lr_new = new.lr_at(step)
+    if new.total_steps == old.total_steps:
+        return True, lr_old, lr_new
+    if getattr(new, "allow_reschedule", False):
+        return True, lr_old, lr_new
+    if lr_new <= lr_old * threshold:
+        return True, lr_old, lr_new
+    return False, lr_old, lr_new
+
+
 def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
     """构造 ``TrainerCallback``：在步边界应用计划变更 + 切语料 + 覆写 LR。
 
@@ -466,15 +489,13 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
             self._log(f"[plan] 检测到计划变更（plan_version {getattr(old,'plan_version',None)}"
                       f" -> {new.plan_version}）")
             if new.total_steps != old.total_steps:
-                lr_now_old = old.lr_at(state.global_step)
-                lr_now_new = new.lr_at(state.global_step)
                 # docs/00 E18：改总步数会把余弦重铺，当前 LR 可能**向上跳**。
                 # 上一轮就这样在训练中途把 LR 抬过两次，等于做了一次没人批准的
                 # 热重启；日志里只留下一行"余弦随之重铺"。
-                # 现在默认拒绝：保留旧计划，直到操作者在 JSON 里显式写
-                # "allow_reschedule": true。往下掉是安全的（学习率变小），放行。
-                if (not getattr(new, "allow_reschedule", False)
-                        and lr_now_new > lr_now_old * 1.02):
+                # 判定抽到 should_accept_reschedule，业务逻辑与判定分离，便于测试。
+                accept, lr_now_old, lr_now_new = should_accept_reschedule(
+                    old, new, state.global_step)
+                if not accept:
                     self.plan = old
                     print(
                         f"[plan] 拒绝本次计划变更：total_steps {old.total_steps} -> "

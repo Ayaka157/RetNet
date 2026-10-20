@@ -461,15 +461,16 @@ EVIDENCE = {
     "E08": "验证方式：`tests/test_live_params.py` 三个用例——新模型比例 >99%、整块清零后比例下降、"
            "已知张量清零一半后 live 数精确减少对应元素数。旧代码只打印 `sum(p.numel())`，"
            "在 67% 为零时仍输出 504,179,896，这组数字就是修复前的反例。",
-    "E09": "验证方式：检查 `build_flat_corpus.py --help` 里 `--add-eos` 的默认值，以及生成的 `meta.json` "
-           "中 `add_eos` 字段。旧包全部是 false，v21 只有第 0 段（由 `prepare_pretrain_v2.py` 显式加 eos）"
+    "E09": "验证方式：`tests/test_build_scripts.py::test_add_eos_is_default` 直接跑命令行脚本，"
+           "不传 `--add-eos`，然后断言产出分片里 eos(2) 的数量不少于记录数、且 `meta.json` 的 "
+           "`add_eos` 为 true。旧包全部是 false，v21 只有第 0 段（由 `prepare_pretrain_v2.py` 显式加 eos）"
            "有边界，后 124,652 步（78%）都在无边界流上训练。",
-    "E10": "验证方式：给 `build_flat_corpus.py` 传一个不存在的字段名，必须在读第一条记录时立刻退出并"
-            "打印真实字段；旧行为要等分词跑完才以 >1% 错误率失败。实证据是 `prog_zh` 的 10 个数值列"
-            "被 `auto` 选中，这类污染不报错、只降低质量。",
-    "E11": "验证方式：对一个没有 `meta.json` 的目录运行 `build_ctx_mix.py`，必须立刻 SystemExit；"
-            "加 `--allow-boundaryless` 才放行并打印警告。旧脚本在 docstring 里承认边界丢失，"
-            "却仍然用它造 16K 包，这是“知道缺陷还固化缺陷”的典型。"
+    "E10": "验证方式：`tests/test_build_scripts.py::test_wrong_text_field_fails_fast` 传一个不存在的字段名，"
+            "要求进程非零退出且输出里出现“一个都不存在/可用字段”；旧行为要等分词跑完才以 >1% 错误率失败。"
+            "实证据是 `prog_zh` 的 10 个数值列被 `auto` 选中，这类污染不报错、只降低质量。",
+    "E11": "验证方式：`tests/test_build_scripts.py` 两个用例——没有 `meta.json` 的目录必须非零退出且"
+            "出现“无法确认文档边界”；加 `--allow-boundaryless` 时不得出现这类拒绝对话、且要打印显式警告。"
+            "旧脚本在 docstring 里承认边界丢失，却仍然用它造 16K 包，这是“知道缺陷还固化缺陷”的典型。"
             "该开关会写进 README，任何一次使用都必须在实验记录里注明理由与影响范围，"
             "并同时报告该包占总训练 token 的比例，方便事后判断影响有多大。",
     "E12": "验证方式：`tests/test_eos_present.py` 三个用例——无 eos 抛 ValueError、有 eos 正常打开、"
@@ -481,19 +482,21 @@ EVIDENCE = {
     "E14": "验证方式：`tests/test_val_disjoint.py` 三个用例——同目录 SystemExit、不同目录通过、"
             "同一路径的另一种写法也必须被识别。旧配置的 `val_dir` 与 `sft_mix` 的 40% 重叠，"
             "对应日志是 eval_loss 从 4.55 掉到 2.4450。",
-    "E15": "验证方式：检查 `TrainingArguments` 里 `load_best_model_at_end` 为 False；"
-            "离线选模型改用 `eval_holdout.py` 在 `pretrain_v2/*_val.npy` 上跑。"
-            "旧行为对应的事实是：最终模型域内 held-out 3.5023，比 step 17,500 的 2.8471 差 0.655 nat。",
+    "E15": "验证方式：`tests/test_train_config_guards.py::test_best_model_selection_is_disabled` 断言源码里"
+            "`load_best_model_at_end=False` 存在、且不得再出现 `=True`；离线选模型改用 `eval_holdout.py` "
+            "在 `pretrain_v2/*_val.npy` 上跑。旧行为对应的事实是：最终模型域内 held-out 3.5023，"
+            "比 step 17,500 的 2.8471 差 0.655 nat。",
     "E16": "验证方式：`tests/test_parallel_chunkwise_equiv.py` 比较 parallel vs chunkwise、"
             "parallel vs recurrent，容差按 logits 尺度设相对阈值。旧实现实测 "
             "mean|Δlogit|=0.0158、argmax 一致率 99.66%，而评测脚本强制 parallel，"
             "所以那三组 held-out 数字测的不是训练的函数。",
-    "E17": "验证方式：`train.py --help` 里 `--save_total_limit` 的默认值必须是 4；"
-            "`run_task.py` 的 plan 与普通分支都要把它传下去。旧日志里 checkpoint 数量与模板不符、"
-            "删除又只走 logger.info，正是这个默认值不一致造成的静默损失。"
+    "E17": "验证方式：`tests/test_train_config_guards.py::test_save_total_limit_default_is_four` 用正则读取"
+            "`--save_total_limit` 的默认值，必须是 4；`run_task.py` 的 plan 与普通分支都要把它传下去。"
+            "旧日志里 checkpoint 数量与模板不符、删除又只走 logger.info，正是这个默认值不一致造成的静默损失。"
             "两处默认值必须同时改，否则同一份配置在不同入口下会产生不同的检查点数量。",
-    "E18": "验证方式：构造两个 `total_steps` 不同的计划，让新计划把当前 LR 抬高，"
-            "断言 `_apply_plan_change` 保留旧计划并打印拒绝信息；加 `allow_reschedule: true` 后才放行。"
+    "E18": "验证方式：`tests/test_plan_reschedule.py` 四个用例——延长计划（LR 上跳）必须拒绝；"
+            "加 `allow_reschedule: true` 后放行；缩短计划（LR 只变小）放行；总步数不变放行。"
+            "判定被抽成纯函数 `should_accept_reschedule`，测试直接构造两个 Plan，不需要启动 Trainer。"
             "旧行为对应的是 `plan_ddp2.json` 里 8 次 `_readme` 热改记录与 `lr` 列的跳变。"
             "这条规则也会写进计划 schema 的示例与 README，避免下次又靠日志里的“余弦重铺”去发现。",
     "E19": "验证方式：`tests/test_regressions_extra.py::test_refresh_detects_same_size_replacement` "
