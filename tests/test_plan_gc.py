@@ -44,7 +44,11 @@ def check(cond, msg):
 
 def write_shard(path, n_tokens, seed=0):
     rng = np.random.default_rng(seed)
-    arr = rng.integers(1, 19999, size=n_tokens, dtype=np.int16)
+    # 从 3 开始取，避免随机出现 2 与注入的 eos 混淆；
+    # 每 32 个 token 注入一个 eos(2)：docs/00 E12 之后 _FlatStage 默认要求
+    # 分片里存在文档边界，不注入会直接拒绝打开。
+    arr = rng.integers(3, 19999, size=n_tokens, dtype=np.int16)
+    arr[::32] = 2
     np.save(path, arr)
     return path
 

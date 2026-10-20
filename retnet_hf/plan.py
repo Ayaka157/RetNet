@@ -93,6 +93,7 @@ class Plan:
     source: Path | None = None
     raw: dict = field(default_factory=dict)
     val_dir: str = ""
+    allow_reschedule: bool = False   # 允许"改总步数 -> 重铺余弦"把当前 LR 抬上去
     min_free_gb: float = 8.0      # 数据盘剩余低于此值时告警（防炸盘）
 
     def resolved_val_dir(self) -> Path:
@@ -179,6 +180,7 @@ def parse_plan(data: dict, source: Path | None = None) -> Plan:
         source=source,
         raw=data,
         val_dir=str(data.get("val_dir", "")),
+        allow_reschedule=bool(data.get("allow_reschedule", False)),
         min_free_gb=float(data.get("min_free_gb", 8.0)),
     )
     if plan.lr_min > plan.lr_peak:
@@ -466,6 +468,20 @@ def make_plan_callback(path=None, verbose: bool = True, check_every: int = 200):
             if new.total_steps != old.total_steps:
                 lr_now_old = old.lr_at(state.global_step)
                 lr_now_new = new.lr_at(state.global_step)
+                # docs/00 E18：改总步数会把余弦重铺，当前 LR 可能**向上跳**。
+                # 上一轮就这样在训练中途把 LR 抬过两次，等于做了一次没人批准的
+                # 热重启；日志里只留下一行"余弦随之重铺"。
+                # 现在默认拒绝：保留旧计划，直到操作者在 JSON 里显式写
+                # "allow_reschedule": true。往下掉是安全的（学习率变小），放行。
+                if (not getattr(new, "allow_reschedule", False)
+                        and lr_now_new > lr_now_old * 1.02):
+                    self.plan = old
+                    print(
+                        f"[plan] 拒绝本次计划变更：total_steps {old.total_steps} -> "
+                        f"{new.total_steps} 会让当前 LR 从 {lr_now_old:.3e} 抬到 "
+                        f"{lr_now_new:.3e}。若确实要重铺余弦，在该计划 JSON 里加 "
+                        f"\"allow_reschedule\": true 后重新保存。", flush=True)
+                    return
                 state.max_steps = new.total_steps
                 self._log(
                     f"[plan] total_steps {old.total_steps} -> {new.total_steps}；"

@@ -188,6 +188,28 @@ def _sync_resume_state(ckpt: Path, training_args) -> None:
               flush=True)
 
 
+def live_param_ratio(model):
+    """返回 (非零参数数, 总参数数, 比例)。参数量本身不说明任何问题（E08）。"""
+    total = sum(p.numel() for p in model.parameters())
+    live = sum(int((p != 0).sum()) for p in model.parameters())
+    return live, total, (live / max(1, total))
+
+
+def assert_val_disjoint(val_path, train_dirs) -> None:
+    """验证集目录不能与任何训练阶段同目录（E14）。
+
+    上一轮 val_dir 是 chat_pack_v13，而 sft_mix 里 40% 就是它，
+    训练期 eval_loss 因此不可信、best-model 选择也被污染。
+    这里在构造数据集之前就抛错，不给"先跑起来再说"的机会。
+    """
+    v = str(Path(val_path).resolve())
+    for d in train_dirs:
+        if str(Path(d).resolve()) == v:
+            raise SystemExit(
+                f"[preflight] 验证集目录 {val_path} 同时是训练阶段 {d} 的数据目录。"
+                f"验证集进了训练，eval_loss 与 best-model 选择都不可信。")
+
+
 def _preflight(model, args) -> None:
     """开训前的硬检查：活参数比例 + gamma 分布。任一不过就拒绝开训。
 
@@ -201,9 +223,7 @@ def _preflight(model, args) -> None:
     这里只做下限检查（<=0 直接拒绝）并打印分布，真正的"是否被衰减"
     由训练中的 step 100/1000 比值断言负责。
     """
-    total = sum(p.numel() for p in model.parameters())
-    live = sum(int((p != 0).sum()) for p in model.parameters())
-    ratio = live / max(1, total)
+    live, total, ratio = live_param_ratio(model)
     print(f"[preflight] live params {live:,}/{total:,} = {ratio * 100:.2f}%", flush=True)
     if ratio < 0.95:
         raise SystemExit(
@@ -354,11 +374,7 @@ def main():
     # 上一轮的 val_dir 是 chat_pack_v13，而最后 14,000 步的 sft_mix 里 40% 就是它，
     # 于是 eval_loss 在末段从 4.55 掉到 2.4450 这件事根本不可信。
     if plan_obj is not None:
-        train_dirs = {str(s.resolved_dir().resolve()) for s in plan_obj.stages}
-        if str(Path(val_path).resolve()) in train_dirs:
-            raise SystemExit(
-                f"[preflight] 验证集目录 {val_path} 同时是某个训练阶段的数据目录。"
-                f"验证集进了训练，eval_loss 与 best-model 选择都不可信。")
+        assert_val_disjoint(val_path, [s.resolved_dir() for s in plan_obj.stages])
     val_ds = PackedChatDataset(str(val_path / "val.ids.npy"),
                                str(val_path / "val.wcode.npy"), seq_len)
     if plan_obj is not None:

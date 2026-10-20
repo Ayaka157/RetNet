@@ -39,7 +39,9 @@ def check(cond, msg):
 def write_flat(d: Path, name: str, n_rows: int, seed=0):
     d.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
-    np.save(d / name, rng.integers(1, 19999, size=(SEQ + 1) * n_rows, dtype=np.int16))
+    arr = rng.integers(3, 19999, size=(SEQ + 1) * n_rows, dtype=np.int16)
+    arr[::32] = 2      # docs/00 E12：必须有 eos，否则 _FlatStage 拒绝打开
+    np.save(d / name, arr)
 
 
 def write_packed(d: Path, n_rows: int, seed=0):
