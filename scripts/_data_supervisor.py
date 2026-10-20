@@ -38,14 +38,20 @@ SPECS = [
     # need_gb：够分词所需的**完整**字节数（cap / 1.1，实测约 1.17 token/字节）。
     # 不必等整个数据集下完：代码只要 2.07B token，9 个分片就够，
     # 等剩下 18 个白等到段切换之后（2026-10-18 实测）。
+    #
+    # text_field（docs/00 E10）：**必须显式**，不再用 auto。
+    # auto 用字段名黑名单猜正文，会把 prog_zh 的 10 个数值元数据列拼进训练流。
+    # 这里的 "text" 是按已知 schema 写的；若某个数据集不是这个列名，
+    # build_flat_corpus 现在会在读第一条记录时立刻退出并打印真实字段名，
+    # 不会先跑几小时再以错误率失败。
     dict(name="code",     src="ling_coder",        out="hf_pack_code",        n=27, extract=False,
-         cap=2_500_000_000, need_gb=2.0),
+         cap=2_500_000_000, need_gb=2.0,   text_field="text"),
     dict(name="web",      src="chinese_web_hq",    out="hf_pack_chinese_web", n=13, extract=False,
-         cap=700_000_000,   need_gb=0.64),
+         cap=700_000_000,   need_gb=0.64,  text_field="text"),
     # textbook 解压出 696,600 个文件，其中 2/3 是 stats.json（非文本），
     # 不跳过会被算成 66% 错误率，触发分词脚本自带的「错误率 > 1% 判失败」守卫。
     dict(name="textbook", src="fineweb_edu_zh_v3", out="hf_pack_textbook",    n=18, extract=True,
-         cap=400_000_000,   need_gb=0.36, skip="stats.json"),
+         cap=400_000_000,   need_gb=0.36,  text_field="text", skip="stats.json"),
 ]
 
 INTERVAL = 300          # 每轮的间隔秒数
@@ -179,7 +185,10 @@ def prepare(spec) -> bool:
     log(f"  开始分词 {spec['name']}：{len(files)} 个文件 -> {out_dir}")
     cmd = [PY, "-u", "scripts/build_flat_corpus.py",
            "--tokenizer", str(TOKENIZER), "--out", str(out_dir), kind, *patterns,
-           "--text-field", "auto", "--tokens-per-shard", "250000000"]
+           # 显式正文列 + 文档边界，两者都不能再靠默认值（docs/00 E09/E10）
+           "--text-field", spec["text_field"],
+           "--add-eos",
+           "--tokens-per-shard", "250000000"]
     if spec.get("cap"):
         cmd += ["--max-tokens", str(spec["cap"])]
     if spec.get("skip"):

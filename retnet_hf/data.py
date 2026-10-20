@@ -142,10 +142,25 @@ class _FlatStage:
     def shard_count(self) -> int:
         return len(self.shards)
 
+    @staticmethod
+    def _sig(shards):
+        """分片签名：名字 + mtime_ns + 大小。只比数量会漏掉"同尺寸替换"（E19）。"""
+        out = []
+        for p, _arr, _n in shards:
+            st = p.stat()
+            out.append((p.name, st.st_mtime_ns, st.st_size))
+        return tuple(out)
+
     def refresh(self) -> bool:
-        """重新扫描目录；有新分片就接过，返回是否发生变化。"""
+        """重新扫描目录；分片集合或任一分片发生变化就接过，返回是否发生变化。
+
+        2026-10-20（docs/00 E19）：旧实现只比 ``len(shards)`` 与总行数，
+        一个同尺寸的分片被替换时两个值都不变，函数返回 False，
+        训练继续用旧 mmap 读到已经过期的内容。现在按
+        (文件名, mtime_ns, 大小) 三元组比较，任何一处变化都会触发重扫。
+        """
         shards, starts, total = self._scan()
-        if len(shards) == len(self.shards) and total == self._rows:
+        if self._sig(shards) == self._sig(self.shards):
             return False
         self.shards, self._starts, self._rows = shards, starts, total
         return True

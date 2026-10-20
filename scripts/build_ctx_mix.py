@@ -69,7 +69,33 @@ def main() -> int:
     ap.add_argument("--out", default="data_cache/hf_pack_ctx16k")
     ap.add_argument("--tokens", type=int, default=500_000_000)
     ap.add_argument("--mix", default="code2:0.60,sft:0.25,math:0.10,prog:0.05")
+    ap.add_argument("--allow-boundaryless", action="store_true",
+                    help="明确接受无文档边界的来源。默认拒绝（docs/00 E11）。")
     args = ap.parse_args()
+
+    # 2026-10-20（docs/00 E11）：本脚本的 docstring 自己写着
+    # "flat 分片的原始边界在分词时就丢了，无法恢复"——然后继续用它造 16K 包。
+    # 知道缺陷还继续用，等于把缺陷固化进下一轮。现在默认拒绝：
+    # 每个 flat 来源都必须有 meta.json，且 add_eos 为真；
+    # 没有就停，让你去重建那份语料，而不是把边界问题带进训练。
+    def _require_eos(d: Path, label: str) -> None:
+        meta = d / "meta.json"
+        if not meta.exists():
+            raise SystemExit(
+                f"[E11] 来源 {label} 缺少 {meta}，无法确认文档边界。\n"
+                f"       先用带 --add-eos 的 build_flat_corpus.py 重建它。")
+        m = json.loads(meta.read_text(encoding="utf-8"))
+        if not m.get("add_eos"):
+            raise SystemExit(
+                f"[E11] 来源 {label} 的 meta.json 写着 add_eos=false，是无边界流。\n"
+                f"       用带 --add-eos 的 build_flat_corpus.py 重建，\n"
+                f"       或显式加 --allow-boundaryless 并把这条写进实验记录。")
+
+    if not args.allow_boundaryless:
+        for _k, _d in (("code2", args.code2), ("math", args.math), ("prog", args.prog)):
+            _require_eos(Path(_d), _k)
+    else:
+        log("⚠️ --allow-boundaryless：接受无文档边界来源，训练效果自负（docs/00 E11）")
 
     ratios = {}
     for part in args.mix.split(","):

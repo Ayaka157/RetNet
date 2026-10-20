@@ -241,6 +241,24 @@ def main(argv=None) -> int:
     for old in out.glob("shard_*.npy"):
         old.unlink()
 
+    kind = "parquet" if args.parquet else "jsonl"
+    patterns = args.parquet or args.jsonl
+
+    # 2026-10-20（docs/00 E10）：显式字段要"早失败"。
+    # 以前字段写错时，pick_text 对每条记录都返回空，全部计入 errors，
+    # 要等分词跑完（可能几小时）才在结尾以 >1% 错误率退出；更糟的是
+    # 若字段只在部分记录里缺失，会静默丢掉那部分数据。
+    # 这里先读第一条记录，一个字段都对不上就立刻退出，并打印可用字段。
+    _first = next(iter_records(patterns, kind, skip=skip_names), None)
+    if _first is None:
+        raise SystemExit(f"输入里没有任何可读记录：{patterns}")
+    _missing = [f for f in fields if f not in _first]
+    if len(_missing) == len(fields):
+        raise SystemExit(
+            f"--text-field {fields} 在第一条记录里一个都不存在。\n"
+            f"  可用字段: {sorted(_first)}\n"
+            f"  请显式指定正文列；不要用 auto（它会把数值/元数据列拼进正文）。")
+
     buf = []
     total = 0
     errors = 0
@@ -248,8 +266,6 @@ def main(argv=None) -> int:
     shard_idx = 0
     shards = []
     t0 = time.time()
-    kind = "parquet" if args.parquet else "jsonl"
-    patterns = args.parquet or args.jsonl
 
     def flush(final=False):
         nonlocal buf, total, shard_idx

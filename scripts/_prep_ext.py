@@ -80,7 +80,8 @@ def tokenize(name: str, src: str, out: str, cap: int, patterns: list[str],
     cmd = [PY, "-u", "scripts/build_flat_corpus.py",
            "--tokenizer", "data_cache/chat_pack_v13/bpe_tokenizer.json",
            "--out", out, "--parquet", *files,
-           "--text-field", fields, "--max-tokens", str(cap),
+           # 显式正文列 + 文档边界（docs/00 E09/E10）：两者都不能再依赖默认值。
+           "--text-field", fields, "--add-eos", "--max-tokens", str(cap),
            "--tokens-per-shard", "250000000"]
     rc = subprocess.call(cmd, cwd=str(ROOT))
     ok = rc == 0 and pack_ready(out_dir)

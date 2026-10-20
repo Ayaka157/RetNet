@@ -388,7 +388,12 @@ def main():
         save_strategy="steps",
         save_steps=args.save_steps,
         save_total_limit=args.save_total_limit,
-        load_best_model_at_end=True,
+        # 2026-10-20（docs/00 E15）：关闭“按 eval_loss 选最佳”。
+        # 训练期 eval 用的是 val_dir（上一轮是 chat_pack_v13），而最后 14,000 步的
+        # sft_mix 里 40% 就是它——这个指标被污染，拿它选最佳等于拿训练集选模型。
+        # 正确做法：训练中只按步数存 checkpoint，跑完后用独立域内 held-out
+        # （data_cache/pretrain_v2/*_val.npy，绝不进训练）在离线脚本里选。
+        load_best_model_at_end=False,
         metric_for_best_model="eval_loss",
         greater_is_better=False,
         report_to=[],
