@@ -36,3 +36,12 @@ def test_no_decay_1d_default_is_on():
     """E06：no_decay_1d 默认必须是开启，且保留显式的反向开关。"""
     assert re.search(r'"--no_decay_1d",\s*action="store_true",\s*default=True', TRAIN)
     assert '"--decay_1d"' in TRAIN, "缺少显式关闭的开关，无法复现旧行为"
+
+
+def test_eval_uses_chunkwise():
+    """N04：评测必须用 chunkwise（训练路径），不能再强制 parallel。"""
+    src = (ROOT / "scripts" / "eval_holdout.py").read_text(encoding="utf-8")
+    assert re.search(r'model\.config\.mode\s*=\s*"chunkwise"', src), \
+        "eval_holdout 没有切到 chunkwise：评测测的会是与训练不同的函数"
+    assert not re.search(r'model\.config\.mode\s*=\s*"parallel"', src)
+    assert '"--chunk-size"' in src, "缺少 --chunk-size，无法与训练块大小对齐"

@@ -514,8 +514,9 @@ EVIDENCE = {
     "E23": "验证方式：直接跑 `pytest tests`，41 项通过；两个脚本式测试单独跑也全过。"
             "更关键的是反向验证：`test_growth_guard_fails_when_reverted_to_zeros` 在把初始化改回全零时"
             "必须失败，否则说明守卫只是装饰。远端 4070（Python 3.11 / torch 2.11）同样 41 项通过。",
-    "N01": "验证方式：`reinit_gamma.py --dry-run` 在真实 checkpoint 上输出“20 层 × 22 头 = 440 个 gamma”、"
-            "新旧半衰期分布、以及“同一层内不同取值 22 个”；不足 22 个就拒绝写入。"
+    "N01": "验证方式：`tests/test_gamma_reinit.py` 三个用例——22 个头的取值必须互不相同（重复即退化成按层）、"
+            "半衰期单调且落在 128–8192 区间、非法 tau 范围必须抛 ValueError；"
+            "再用 `reinit_gamma.py --dry-run` 在真实 checkpoint 上输出“20 层 × 22 头 = 440 个 gamma”与新旧分布。"
             "旧实现输出的是每层均值 0.399..0.586，真实值域 0.106..0.999 被抹掉。",
     "N02": "验证方式：分别按全部 440 个与只按活头统计 gamma 中位数，两个数必须同时出现在报告里。"
             "实测 ep3 活头中位 0.848（半衰期 4.21 token）、v21 0.693（1.89 token），"
@@ -524,8 +525,9 @@ EVIDENCE = {
     "N03": "验证方式：对 `checkpoints/retnet_500m_v21_export` 逐张量统计活行/活列。"
             "实测 L18/L19 的 q_proj 输入活列 1024、输出活行 1024，v_proj 输入 1024，out_proj 输入 2048；"
             "输入列 1024–1407 的 absmax 精确为 0，故层宽是 1024 而不是 1408。",
-    "N04": "验证方式：检查 `eval_holdout.py` 里 `model.config.mode` 的取值与 `--chunk-size` 默认值；"
-            "并在 E16 修完后重测一次基线。旧行为下 parallel 多两次归一化，"
+    "N04": "验证方式：`tests/test_train_config_guards.py::test_eval_uses_chunkwise` 断言源码里 "
+            "`model.config.mode = \"chunkwise\"` 存在、`\"parallel\"` 不存在、且带 `--chunk-size`。"
+            "同时要在 E16 修完后重测一次基线。旧行为下 parallel 多两次归一化，"
             "所有 held-out 数字与训练函数错位，判据必须转 delta 才有意义。",
 }
 

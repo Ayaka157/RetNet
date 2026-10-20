@@ -19,7 +19,7 @@
     retnet_hf/*.py             训练/模型/数据/计划/内核完整包
     run_task.py                任务入口
     scripts/                   生长、建包、重初始化、评测、生成器
-    tests/*.py                 22 个测试文件（52 个 pytest 用例 + 2 个脚本式测试）
+    tests/*.py                 23 个测试文件（56 个 pytest 用例 + 2 个脚本式测试）
   configs/tasks/               上一轮实际配置，仅作对照
 ```
 
@@ -59,7 +59,7 @@ python verify.py
 ## 测试
 
 ```powershell
-python -m pytest tests -q          # 52 passed
+python -m pytest tests -q          # 56 passed
 python tests/test_plan_gc.py       # 全部通过
 python tests/test_plan_pipeline.py # 全部通过
 ```
