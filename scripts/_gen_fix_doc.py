@@ -19,6 +19,8 @@ import re
 import sys
 from pathlib import Path
 
+from _refs import cite, refs_md
+
 ROOT = Path(r"E:\Workspaces\RetNet")
 DOC00 = ROOT / "docs" / "00_错误总表.md"
 OUT = ROOT / "docs" / "00F1_修复对照.md"
@@ -541,6 +543,27 @@ for _e in ENTRIES:
 # 生成
 # ======================================================================
 
+# 错误编号 -> 相关论文（编号对应 Papers/ 文件前缀）。只标真正构成依据的。
+CITE_E: dict[str, list[str]] = {
+    "E01": ["07", "08", "09", "10"],
+    "E02": ["08", "09", "13"],
+    "E03": ["07", "09"],
+    "E04": ["10", "11"],
+    "E05": ["08", "13"],
+    "E06": ["03"],
+    "E09": ["16"],
+    "E10": ["16"],
+    "E11": ["16"],
+    "E12": ["16"],
+    "E16": ["01", "04"],
+    "E21": ["04"],
+    "E23": ["10", "11"],
+    "N01": ["03"],
+    "N02": ["03"],
+    "N04": ["01", "04"],
+}
+
+
 def resolve(ref):
     kind = ref[0]
     path = ROOT / ref[1]
@@ -613,10 +636,15 @@ def main() -> int:
             out.append("```")
             out.append("")
         out.append(e["text"])
+        ids = CITE_E.get(e["id"], [])
+        if ids:
+            out.append("")
+            out.append(cite(*ids))
         out.append("")
         out.append("---")
         out.append("")
 
+    out.append(refs_md())
     OUT.write_text("\n".join(out), encoding="utf-8")
     print(f"✅ 写出 {OUT}：{len(ENTRIES)} 条，{len(OUT.read_text(encoding='utf-8'))} 字符")
     return 0

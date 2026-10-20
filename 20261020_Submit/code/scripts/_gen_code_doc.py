@@ -9,6 +9,8 @@ import ast
 import sys
 from pathlib import Path
 
+from _refs import cite, refs_md
+
 ROOT = Path(r"E:\Workspaces\RetNet")
 OUT = ROOT / "docs" / "01_训练代码逐函数解释.md"
 
@@ -685,6 +687,45 @@ EXPL["scripts/grow_500m.py::main.grow_norm"] = E(
 )
 
 
+# 函数 -> 论文编号（按 Papers/ 的前缀）。只给真正依赖该论文的函数加引用，
+# 不搞"每段都挂一串编号"的形式主义。
+CITE: dict[str, list[str]] = {
+    "retnet_hf/modeling_retnet.py::RetNetHFConfig.__init__": ["01"],
+    "retnet_hf/modeling_retnet.py::RetNetHFConfig.key_dim": ["01"],
+    "retnet_hf/modeling_retnet.py::rotate_every_two": ["02"],
+    "retnet_hf/modeling_retnet.py::theta_shift": ["02"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention.__init__": ["01", "03"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._init_weights": ["01", "03"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._rotations": ["02"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._project_and_rotate": ["01", "02"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._head_group_norm": ["05"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._decay_mask": ["01"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._parallel_retention": ["01", "04"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._parallel_final_state": ["01", "04"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._recurrent_retention": ["01", "04"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention._chunkwise_retention": ["01", "04"],
+    "retnet_hf/modeling_retnet.py::MultiScaleRetention.forward": ["01"],
+    "retnet_hf/modeling_retnet.py::GrowthLayerNorm.__init__": ["07", "08", "09", "10", "11", "13"],
+    "retnet_hf/modeling_retnet.py::GrowthLayerNorm.forward": ["08", "13"],
+    "retnet_hf/modeling_retnet.py::RetNetBlock._norm": ["07", "09"],
+    "retnet_hf/modeling_retnet.py::RetNetBlock.__init__": ["01", "06"],
+    "retnet_hf/modeling_retnet.py::RetNetBlock._block_forward": ["01"],
+    "retnet_hf/modeling_retnet.py::RetNetForCausalLM.__init__": ["01"],
+    "retnet_hf/modeling_retnet.py::RetNetForCausalLM._init_weights_local": ["07", "09"],
+    "retnet_hf/modeling_retnet.py::RetNetForCausalLM._forward_hidden": ["01"],
+    "retnet_hf/modeling_retnet.py::RetNetForCausalLM.generate": ["01", "04"],
+    "retnet_hf/retention_fast.py::_index_tables": ["01", "04"],
+    "retnet_hf/retention_fast.py::_decay_tables": ["01"],
+    "retnet_hf/retention_fast.py::chunkwise_batched": ["01", "04"],
+    "retnet_hf/train.py::CompileSafeTrainer.get_decay_parameter_names": ["03"],
+    "retnet_hf/train.py::_preflight": ["01", "03"],
+    "retnet_hf/train.py::live_param_ratio": ["10"],
+    "scripts/grow_500m.py::main": ["07", "08", "09", "10", "11", "12", "13", "14"],
+    "scripts/grow_500m.py::main.fill": ["07", "08", "09"],
+    "scripts/grow_500m.py::main.grow_norm": ["08", "09", "13"],
+}
+
+
 def collect(path: Path):
     src = path.read_text(encoding="utf-8")
     lines = src.splitlines()
@@ -783,10 +824,13 @@ def main() -> int:
             out.append(src)
             out.append("```")
             out.append("")
-            out.append(text)
+            ids = CITE.get(f"{rel}::{q}", [])
+            out.append(text + (("\n\n" + cite(*ids)) if ids else ""))
             out.append("")
         out.append("---")
         out.append("")
+
+    out.append(refs_md())
 
     OUT.write_text("\n".join(out), encoding="utf-8")
     print(f"✅ 写出 {OUT}：{total} 个函数，{len(OUT.read_text(encoding='utf-8'))} 字符")

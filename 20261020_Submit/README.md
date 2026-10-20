@@ -78,3 +78,12 @@ python tests/test_plan_pipeline.py # 全部通过
   新方案的训练配置不在本目录，等 02 计划里那批 `tasks/v22_*.json` 定稿后单独提交。
 - 远端 clone 里没有 checkpoint（被 gitignore），所以 `reinit_gamma.py` 的产物体积验证
   只在本地做过；它的 pure 函数（`build_gamma`）由代码审查与 dry-run 覆盖。
+
+## 文内引用
+
+四份文档都按 `Papers/` 的文件前缀加了文内引用，编号 01–17 与论文一一对应：
+01 RetNet、02 xPos、03 GLA、04 Transformers are RNNs、05 GroupNorm、06 SwiGLU、
+07 Net2Net、08 Network Morphism、09 bert2BERT、10 StackBERT、11 MSLT、12 LiGO、
+13 ReZero、14 Fixup、15 Chinchilla、16 FineWeb、17 Skywork。
+01 与 00F1 的引用由生成器写入（`code/scripts/_refs.py` 是唯一编号源），
+00 与 02 由 `code/scripts/_add_citations.py` 按小节插入；每篇末尾附参考文献表。
