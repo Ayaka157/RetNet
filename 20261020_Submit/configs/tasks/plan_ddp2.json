@@ -1,0 +1,110 @@
+{
+  "_readme": [
+    "训练计划（2 卡 DDP 版，按实测吞吐与余额定长）。",
+    "",
+    "【为什么是这个长度】",
+    "  实测 DDP 稳态 1.30 it/s（每步 65,536 token）= 85,197 tok/s，是单卡的 1.49x。",
+    "  单价 ¥13.97/h，余额 ¥198.50 → 14.2 h。留 ~1 h 缓冲 → 目标 13.0 h → 60,955 步。",
+    "  token: 60,955 x 65,536 = 3.995B；其中新增唯一 token 3.831B",
+    "  （pretrain 2.307 + 网页 0.459 + 代码 0.885 + 教材 0.180）",
+    "  → 累计唯一 4.383B / 504.18M 参数 = 8.69 token/参数。",
+    "",
+    "【为什么代码段从 1.55B 砍到 0.885B】",
+    "  2 卡性价比比单卡差 35%，余额只够 4B token。为保证 pretrain/网页/教材/退火都不缩，",
+    "  先从代码段减。若实测比 1.30 it/s 快，可热加载把 code_ling 的 steps 改回来。",
+    "【2026-10-18 热更新】实测 DDP 稳态 1.69 it/s（关掉 find_unused_parameters 后从 1.30 提上来），同预算可多跑 30% 步数，全部加给代码段（13,500 -> 31,545）。total_steps 从 60,955 涨到 78,999，余弦被拉长；当前还在 warmup 末端，LR 变化可忽略。",
+    "【2026-10-18 16:30 热更新】实测 1.69 it/s；按“剩余时间 x 速率 - eval 开销”精算，79,000 步会跑到 03:38 撞上死手(03:26)，收敛到 76,000 步可于 03:07 完成并让余弦走完。code 段 31,545 -> 28,545。",
+    "【2026-10-18 19:35 扩计划】用户追加预算到 ¥290.30，目标 20 tok/param。在 textbook 与 anneal 之间插入 code_ling2 段 72,000 步（4.72B token）。长跑有效速率按实测 1.607 it/s（含 eval）算，148,000 步约 25.8 h，13:38 开训 -> 次日 15:20，花费约 ¥359，余额余约 ¥10。",
+    "【2026-10-18 19:50 定稿】用户要求\"跑满预算 + 预留微调，新旧数据混合\"。尾部：code_ling2 68,557 步 -> sft_mix 14,000 步（新旧混合 SFT）。总 152,557 步，按 1.607 it/s 约 20.6 h，次日 16:30 完成，余约 ¥24。唯一 token 约 10.0B = 19.8 tok/param（差 0.2 是代码语料总量的硬上限）。",
+    "【2026-10-18 20:15】子代理调研后补入 prog_zh 段 3,500 步（0.23B 新 token，BAAI IndustryCorpus2 中文编程，apache-2.0），使唯一 token 越过 10.08B = 20/参数。",
+    "【2026-10-18 21:20】账目预演发现网页段实际只有 0.23B（预算 0.46B 会循环），唯一 token 只到 19.5。补一个独立 math_zh 段 3,800 步（0.25B，已分好），推到 10.09B = 20.0/参数。总步数 156,057 -> 159,857，预计次日 17:40 完成，之后再接力 v22 16K 扩展。"
+  ],
+  "plan_version": 13,
+  "seq_len": 2048,
+  "min_free_gb": 10,
+  "stages": [
+    {
+      "name": "pretrain_v2_noskypile",
+      "data_dir": "data_cache/pretrain_v2",
+      "mode": "flat",
+      "exclude": [
+        "skypile_"
+      ],
+      "min_shards": 46,
+      "steps": 35205,
+      "gc": true,
+      "_note": "2,307,246,540 token，跑完自动回收约 4.3 GB"
+    },
+    {
+      "name": "chinese_web_hq",
+      "data_dir": "data_cache/hf_pack_chinese_web",
+      "mode": "flat",
+      "min_shards": 1,
+      "steps": 7000,
+      "gc": true,
+      "_note": "Morton-Li 高质量中文网页 13 片；分词只产出 0.23B token（1 个分片），所以 min_shards 必须是 1——写 10 会让段 1 永远不就绪，训练卡在 35,205 步"
+    },
+    {
+      "name": "code_ling",
+      "data_dir": "data_cache/hf_pack_code",
+      "mode": "flat",
+      "min_shards": 10,
+      "steps": 25045,
+      "gc": true,
+      "_note": "inclusionAI/Ling-Coder-SFT 约 1.64B token（匀 3,500 步给退火）"
+    },
+    {
+      "name": "textbook",
+      "data_dir": "data_cache/hf_pack_textbook",
+      "mode": "flat",
+      "min_shards": 1,
+      "steps": 2750,
+      "gc": true,
+      "_note": "Fineweb-Edu-Chinese-V3 教材/学科"
+    },
+    {
+      "name": "code_ling2",
+      "data_dir": "data_cache/hf_pack_code2",
+      "mode": "flat",
+      "min_shards": 10,
+      "steps": 68557,
+      "gc": false,
+      "_note": "Ling-Coder 剩余分片，约 4.49B 新 token（占总新增唯一 token 的主体）；gc=False：留给 v22 长上下文扩展做 8k 重切，别回收"
+    },
+    {
+      "name": "prog_zh",
+      "data_dir": "data_cache/hf_pack_prog",
+      "mode": "flat",
+      "min_shards": 1,
+      "steps": 3500,
+      "gc": true,
+      "_note": "BAAI/IndustryCorpus2 中文编程语料（apache-2.0，0.74 GB -> 约 0.3B token），用来把唯一 token 推过 20/参数"
+    },
+    {
+      "name": "math_zh",
+      "data_dir": "data_cache/hf_pack_math",
+      "mode": "flat",
+      "min_shards": 1,
+      "steps": 3800,
+      "gc": true,
+      "_note": "finemath + 中文数学，已分好 0.25B token；把唯一 token 从 19.5 补到 20.0"
+    },
+    {
+      "name": "sft_mix",
+      "data_dir": "data_cache/hf_pack_sft",
+      "mode": "packed",
+      "steps": 14000,
+      "gc": false,
+      "_note": "新旧混合 SFT：旧对话 40% + 代码 35% + 教材 15% + 数学 10%；保留对话的 reply/prompt 掩码，每个 batch 都同时看到新旧分布"
+    }
+  ],
+  "lr": {
+    "peak": 0.00011,
+    "min": 1.1e-05,
+    "warmup": 250
+  },
+  "save_steps": 1200,
+  "eval_steps": 1200,
+  "val_dir": "data_cache/chat_pack_v13",
+  "notes": "v21（2卡，热更新）：79k 步 = 5.18B token，唯一 token 5.01B → 11.04 token/参数。"
+}
