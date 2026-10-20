@@ -15,6 +15,13 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 
+# 同 test_plan_gc.py：ssh 到 GBK 控制台时，打印 ✅/❌ 会 UnicodeEncodeError。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:  # noqa: BLE001
+        pass
+
 from retnet_hf.data import StagePackedDataset
 from retnet_hf.plan import PlanWatcher, parse_plan
 

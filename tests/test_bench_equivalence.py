@@ -102,7 +102,7 @@ CASES = [
 ]
 
 
-def test_batched_equals_single(model, dev, fails):
+def check_batched_equals_single(model, dev, fails):
     """Batched decoding must give every request the reply it would get alone.
 
     This is the property the whole throughput story rests on: lockstep batching
@@ -110,6 +110,11 @@ def test_batched_equals_single(model, dev, fails):
     paths use the **same single-stream sampling** (draw ``k`` comes from the k-th
     ``multinomial`` on the ambient RNG, which the fresh ``manual_seed`` per
     request resets), so no per-request stream bookkeeping has to agree.
+
+    NOTE(2026-10-20): 函数名以前是 ``test_batched_equals_single``，而它需要
+    model/dev/fails 三个夹具，pytest 会把它当测试收集并在 setup 阶段报
+    "fixture 'model' not found"。它是 ``main()`` 内部调用的辅助函数，
+    不是测试用例，故改名为 check_ 前缀（docs/00 E25）。
     """
     import random
     rng = random.Random(4)
@@ -223,7 +228,7 @@ def main() -> int:
     print(f"  {'OK ' if not any('chunkwise' in f for f in fails) else '!! '}"
           f"{'chunkwise prefill':<22} pad-to-64 path exercised (padded_len={off})")
 
-    test_batched_equals_single(model, dev, fails)
+    check_batched_equals_single(model, dev, fails)
 
     if fails:
         print(f"\n{len(fails)} FAILURES:")

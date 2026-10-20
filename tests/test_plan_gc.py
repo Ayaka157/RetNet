@@ -19,6 +19,15 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 
+# 远端（4070 笔记本）通过 ssh 跑时 stdout 是 GBK，打印 ✅/❌ 会抛
+# UnicodeEncodeError 并让测试在第一条断言处整段崩掉（2026-10-20 实测）。
+# 所有会打印符号的脚本式测试都必须在任何输出之前把 stdout/stderr 固定成 UTF-8。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:  # noqa: BLE001
+        pass
+
 from retnet_hf.data import StagePackedDataset
 from retnet_hf.plan import parse_plan
 
