@@ -33,6 +33,8 @@ def main(argv=None) -> int:
     ap.add_argument("--model", required=True, help="HF 格式的模型目录")
     ap.add_argument("--val-glob", default="data_cache/pretrain_v2/*val*.npy")
     ap.add_argument("--seq-len", type=int, default=2048)
+    ap.add_argument("--chunk-size", type=int, default=128,
+                    help="chunkwise 的块大小，必须与训练时一致（docs/00 N04）")
     ap.add_argument("--batch", type=int, default=4)
     ap.add_argument("--max-tokens", type=int, default=0, help="0 = 全部")
     ap.add_argument("--tag", default="model")
@@ -57,10 +59,16 @@ def main(argv=None) -> int:
         model = _ModelCls.from_pretrained(args.model, dtype=dtype).to(dev).eval()
     except TypeError:                     # 老版本 transformers 用 torch_dtype
         model = _ModelCls.from_pretrained(args.model, torch_dtype=dtype).to(dev).eval()
-    # 评测走 parallel 模式：它与 chunkwise 在整段前向上数学等价（无递推状态），
-    # 而 chunkwise 的参考实现在 bf16 下有 dtype 冲突（matmul 掺杂 float32/bf16）。
-    model.config.mode = "parallel"
-    print(f"[load] {args.model} -> {dev}/{dtype}  mode=parallel（{time.time() - t0:.1f}s）",
+    # 2026-10-20（docs/00 N04/E16）：评测必须走**训练用的那条路径**。
+    # 旧代码强制 mode="parallel"，理由是"parallel 与 chunkwise 数学等价"——
+    # 但 E16 证明 parallel 当时多做两次归一化，两者并不等价。
+    # 那条注释里还提到 chunkwise 参考实现在 bf16 下有 dtype 冲突；
+    # 这里显式切到 chunkwise 并把 chunk_size 固定成训练值，
+    # 若真遇到 dtype 冲突，应当修内核而不是换一条不等价的路径来测。
+    model.config.mode = "chunkwise"
+    model.config.chunk_size = int(args.chunk_size)
+    print(f"[load] {args.model} -> {dev}/{dtype}  "
+          f"mode=chunkwise chunk={args.chunk_size}（{time.time() - t0:.1f}s）",
           flush=True)
 
     files = sorted(glob.glob(str(ROOT / args.val_glob)))
