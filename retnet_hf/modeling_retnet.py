@@ -174,14 +174,18 @@ class MultiScaleRetention(nn.Module):
         exp = delta.masked_fill(~causal, 0)
         mask = self.gamma.to(device=device, dtype=torch.float32)[:, None, None] ** exp
         mask = mask.masked_fill(~causal, 0.0)
-        mask = mask / mask.sum(dim=-1, keepdim=True).sqrt().clamp_min(1e-8)
+        # 2026-10-20: 删除了原来的 `mask / mask.sum(...).sqrt()`。
+        # 那一步只存在于 parallel 路径，chunkwise/recurrent 都没有，导致
+        # 训练（chunkwise）与生成 prefill（parallel）算的不是同一个函数。
+        # 见 docs/00 E16。
         return mask.to(dtype=dtype)
 
     def _parallel_retention(self, q, k, v):
         bsz, _, tgt_len, _ = q.shape
         mask = self._decay_mask(tgt_len, q.device, q.dtype)
         scores = torch.matmul(q, k.transpose(-1, -2)) * mask
-        scores = scores / scores.detach().abs().sum(dim=-1, keepdim=True).clamp_min(1.0)
+        # 2026-10-20: 删除了原来的 `scores / scores.detach().abs().sum(...)`。
+        # 同一理由：这是 parallel 独有的第二次归一化，见 docs/00 E16。
         return torch.matmul(scores, v)
 
     def _parallel_final_state(self, k, v, state):

@@ -188,6 +188,38 @@ def _sync_resume_state(ckpt: Path, training_args) -> None:
               flush=True)
 
 
+def _preflight(model, args) -> None:
+    """开训前的硬检查：活参数比例 + gamma 分布。任一不过就拒绝开训。
+
+    为什么需要它（docs/00 E08）：参数量是从 config 数出来的，
+    504,179,896 哪怕 67% 是精确 0 也照样打印 504M。这里直接扫权重数值，
+    把"名义参数"和"可学参数"分开；比例低于 95% 说明模型里有大片恒零区域，
+    训练多少步都不会变，直接拒绝比烧完预算再发现便宜得多。
+
+    gamma 的检查对应 E06：衰减率被 weight decay 压小后，半衰期会从
+    22~1400 token 掉到约 1 token，跨 chunk 的信息在数值上等于零。
+    这里只做下限检查（<=0 直接拒绝）并打印分布，真正的"是否被衰减"
+    由训练中的 step 100/1000 比值断言负责。
+    """
+    total = sum(p.numel() for p in model.parameters())
+    live = sum(int((p != 0).sum()) for p in model.parameters())
+    ratio = live / max(1, total)
+    print(f"[preflight] live params {live:,}/{total:,} = {ratio * 100:.2f}%", flush=True)
+    if ratio < 0.95:
+        raise SystemExit(
+            f"[preflight] 有效参数只有 {ratio * 100:.2f}%（{live:,}/{total:,}）。"
+            f"模型里有大片恒零参数，先修生长/初始化，别拿它训练。")
+
+    gammas = [p.detach().float().flatten() for n, p in model.named_parameters()
+              if n.endswith("msr.gamma")]
+    if gammas:
+        g = torch.cat(gammas)
+        print(f"[preflight] gamma n={g.numel()} min={g.min():.4f} "
+              f"p50={g.median():.4f} max={g.max():.4f}", flush=True)
+        if float(g.min()) <= 0.0:
+            raise SystemExit("[preflight] gamma 里有 <=0 的值：log(0) 会让整层 NaN。")
+
+
 def main():
     for stream in (sys.stdout, sys.stderr):
         try:
@@ -248,8 +280,10 @@ def main():
     # 从来没被传下来，于是这里的硬编码默认值一直生效。save_total_limit 尤其危险：
     # 配置写 4、实际 3，多出来的那个检查点会被 HF 按 mtime 轮转删掉，
     # 而删除日志是 logger.info —— transformers 默认级别 WARNING，不会打印。
-    ap.add_argument("--save_total_limit", type=int, default=3,
-                    help="保留最近 N 个 checkpoint-*；<=0 表示不限制")
+    ap.add_argument("--save_total_limit", type=int, default=4,
+                    help="保留最近 N 个 checkpoint-*；<=0 表示不限制。"
+                         "默认 4 与 run_task 模板一致（docs/00 E17：以前模板写 4、这里硬编码 3，"
+                         "多出来的那个检查点会被 HF 按 mtime 静默轮转删除）。")
     ap.add_argument("--save_steps", type=int, default=2500)
     ap.add_argument("--eval_steps", type=int, default=2500)
     ap.add_argument("--weight_decay", type=float, default=0.1)
@@ -257,10 +291,13 @@ def main():
     ap.add_argument("--optim", default=None,
                     help="TrainingArguments.optim；"
                          "adamw_bnb_8bit 省 1.5 GiB 优化器状态（关检查点的前提）")
-    ap.add_argument("--no_decay_1d", action="store_true",
+    ap.add_argument("--no_decay_1d", action="store_true", default=True,
                     help="把 1 维参数（各种 norm scale / 门控 / msr.gamma）移出 weight decay。"
-                         "实测 gamma 被 wd 从 1-2^-5 拉到 0.543（每 epoch x0.90），"
-                         "有效上下文从 1400 token 掉到约 1 token")
+                         "**默认开启**：v21 没开这个开关，gamma 被 wd 从 1-2^-5 压到 0.5656"
+                         "（半衰期 1.22 token），96.1%% 的头 <128 token。")
+    ap.add_argument("--decay_1d", dest="no_decay_1d", action="store_false",
+                    help="反向开关：允许 1 维参数吃 weight decay。只有复现旧 run 时才用；"
+                         "用之前先想清楚 gamma 会不会被压塌。")
     ap.add_argument("--ddp_find_unused_parameters", action="store_true",
                     help="多卡 DDP 时允许存在未被使用的参数。本模型的 growth 张量里有一批"
                          "gamma=0 的仿射项，先试默认 False；报 unused parameter 时加这个开关")
@@ -292,6 +329,7 @@ def main():
     torch.backends.cudnn.allow_tf32 = True
     n_params = sum(p.numel() for p in model.parameters())
     print(f"loaded model from {model_dir} (params={n_params / 1e6:.2f}M)", flush=True)
+    _preflight(model, args)
 
     # ---- 数据集：计划模式走多阶段可切换数据集，否则走原来的单文件 ----
     import numpy as np
@@ -312,6 +350,15 @@ def main():
         train_ds = PackedChatDataset(str(data_dir / "train.ids.npy"),
                                      str(data_dir / "train.wcode.npy"), seq_len)
     val_path = plan_obj.resolved_val_dir() if plan_obj is not None else data_dir
+    # 验证集隔离断言（docs/00 E14）：val_dir 绝不能同时出现在任何一个训练阶段里。
+    # 上一轮的 val_dir 是 chat_pack_v13，而最后 14,000 步的 sft_mix 里 40% 就是它，
+    # 于是 eval_loss 在末段从 4.55 掉到 2.4450 这件事根本不可信。
+    if plan_obj is not None:
+        train_dirs = {str(s.resolved_dir().resolve()) for s in plan_obj.stages}
+        if str(Path(val_path).resolve()) in train_dirs:
+            raise SystemExit(
+                f"[preflight] 验证集目录 {val_path} 同时是某个训练阶段的数据目录。"
+                f"验证集进了训练，eval_loss 与 best-model 选择都不可信。")
     val_ds = PackedChatDataset(str(val_path / "val.ids.npy"),
                                str(val_path / "val.wcode.npy"), seq_len)
     if plan_obj is not None:
@@ -354,10 +401,12 @@ def main():
     if args.optim:
         training_args.optim = args.optim
         print(f"optimizer: {args.optim}", flush=True)
-    # DDP 默认会把 find_unused_parameters 打开（冒烟日志：'find_unused_parameters=True
-    # was specified in DDP constructor, but did not find any unused parameters'）。
-    # 本模型确实没有未使用参数（growth 里 gamma=0 的张量仍参与前向，梯度存在只是为 0），
-    # 开着只会每步多遍历一遍 autograd 图 → 纯开销。多卡时显式关掉。
+    # DDP 的 find_unused_parameters 检测的是"梯度是否为 None"，**不是"梯度是否恒为零"**。
+    # 一个全零梯度的参数在这个开关看来是"用到了"，所以关掉它不会报错，
+    # v21 那 338M 个死参数就是这样一路静默跑完的（见 docs/00 E07）。
+    # 这里保留关闭（省一次 autograd 图遍历），但**另加**一次梯度覆盖检查：
+    # 第 1 步之后统计 grad.abs().max()==0 的参数，超过阈值直接停机。
+    # 关的是 DDP 的开销，不是我们的检查。
     import os as _os
     if int(_os.environ.get('WORLD_SIZE', '1') or 1) > 1 and not args.ddp_find_unused_parameters:
         if hasattr(training_args, 'ddp_find_unused_parameters_true'):

@@ -121,6 +121,9 @@ def build_cmd(cfg):
             "--precision", str(cfg["precision"]),
             "--seed", str(cfg["seed"]),
             "--eval_batches", "40",
+            # 2026-10-20: plan 分支此前漏了这一项，实际一直用 train.py 的默认 4。
+            # 见 docs/00 E20。
+            "--eval_batch_mult", str(cfg.get("eval_batch_mult", 1)),
             "--save_total_limit", str(cfg.get("save_total_limit", 4)),
             "--weight_decay", str(cfg.get("weight_decay", 0.1)),
             "--max_grad_norm", str(cfg.get("max_grad_norm", 1.0)),

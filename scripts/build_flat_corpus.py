@@ -185,8 +185,11 @@ def main(argv=None) -> int:
                     help="逗号分隔的文件名关键字，命中的文件跳过（如 stats.json）")
     ap.add_argument("--max-tokens", type=int, default=0,
                     help="产出达到 N token 就停（0=不限）。计划只需要一部分语料时用它省时间省磁盘")
-    ap.add_argument("--add-eos", action="store_true",
-                    help="每条记录末尾追加 eos（纯文本流一般不需要，按语料决定）")
+    ap.add_argument("--add-eos", action="store_true", default=True,
+                    help="每条记录末尾追加 eos。**默认开启**：v21 的所有 hf_pack_* 都漏了它，"
+                         "78% 的训练步数跑在无文档边界的流上（docs/00 E09/E10）。")
+    ap.add_argument("--no-add-eos", dest="add_eos", action="store_false",
+                    help="显式关闭。只有确认下游会自己补边界时才用；关之前先读 docs/00 E09。")
     args = ap.parse_args(argv)
 
     # 直接用 tokenizers 库：retnet/tokenizer.py 的 BPETokenizer 只是它的薄封装，

@@ -1,6 +1,7 @@
 """Packed chat dataset + collator for the HF Trainer (retnet_hf)."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -302,6 +303,26 @@ class StagePackedDataset(Dataset):
                 return 0
         st = self._cache.get(i)
         if st is None or not hasattr(st, "files"):
+            return 0
+        # 2026-10-20（docs/00 E13）：删除前必须证明"可重建"。
+        # 上一轮只查了"是否与别的阶段同目录""是否验证集"，然后就删了，
+        # 结果 hf_pack_* 与 pretrain_v2 的分片全部不可复核。
+        # 现在要求目录里有一份 meta.json，并且写明 source_ids 或 rebuild_cmd；
+        # 缺一个就拒绝删除——宁可少删，不可删错。
+        meta = d / "meta.json"
+        if not meta.exists():
+            print(f"[gc] 拒绝删除阶段 {i}「{sp['name']}」：缺少 {meta}，"
+                  f"无法证明这份数据可重建", flush=True)
+            return 0
+        try:
+            m = json.loads(meta.read_text(encoding="utf-8"))
+        except Exception as exc:                                # noqa: BLE001
+            print(f"[gc] 拒绝删除阶段 {i}「{sp['name']}」：{meta} 读不了（{exc}）",
+                  flush=True)
+            return 0
+        if not (m.get("rebuild_cmd") or m.get("source_ids")):
+            print(f"[gc] 拒绝删除阶段 {i}「{sp['name']}」：{meta} 里没有 "
+                  f"rebuild_cmd / source_ids", flush=True)
             return 0
         targets = st.files()
         if hasattr(st, "close"):

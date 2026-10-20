@@ -134,48 +134,75 @@ def main():
     new = RetNetForCausalLM(cfg)
     new_sd = new.state_dict()
 
-    def fill(p, old_key, out_d, in_d):
-        """把旧权重放进新矩阵的左上角，新增行列保持 0。"""
+    def fill(p, old_key, out_d, in_d, gen):
+        """旧权重放左上角；新**列**置 0（块内隔离），新**行**随机（让新单元有输出）。
+
+        为什么是"列 0 行随机"，而不是全 0 或全随机：
+
+        * 新列若随机，它会立刻改变旧维度的输出，函数不再保真，且无法用任何
+          门控挡住（扰动已经进了旧维度）。所以新列必须是 0。
+        * 新行若全 0，新单元（新头、新隐藏单元）的输出恒为 0，下游那些
+          "读新单元"的列拿到的输入是 0，梯度 `上游 x 0 = 0`，整条新子网
+          永远学不动——v21 的 338M 死参数就是这么来的。
+        * 新行随机后：新单元有非零输出 -> 下游新列拿到非零输入 -> 新列在
+          第 1 步就有梯度；新列变非零后，新行在第 2 步拿到梯度。
+          这是一条**自愈的级联**，不是死锁。
+        """
         w = torch.zeros(out_d, in_d)
         ow = old_sd[old_key]
         w[: ow.shape[0], : ow.shape[1]] = ow
+        n_new_rows = out_d - ow.shape[0]
+        if n_new_rows > 0:
+            w[ow.shape[0]:, : ow.shape[1]] = \
+                torch.randn(n_new_rows, ow.shape[1], generator=gen) * 0.02
         new_sd[p] = w
 
-    def grow_norm(new_p, old_prefix, d_new):
-        """把源的一段/两段 norm 映射到新的两段 norm，新段补零。"""
+    def grow_norm(new_p, old_prefix, d_new, gate):
+        """两段式 norm：旧段照搬，新段一律重设为 gate（不再继承源的零门）。
+
+        gate 的取值不是随手写的，它决定新维度是"能学"还是"永久死"：
+
+        * 中间层（norm1/norm2）必须 gate=1.0。新维度要进入 q/k/v 的**新列**，
+          而新列初始为 0；若 gate 也是 0，则新列乘到的输入恒 0，
+          ``dL/dW_newcol = 上游 x 0 = 0``，新列永远学不动（这是 v21 的死因）。
+          取 1.0 后输入非零，新列即使初值为 0 也能拿到非零梯度。
+        * final_norm 必须 gate=0.0。它是新维度通往 logits 的唯一出口，
+          置 0 才能保证"生长后 logits 不变"；它的梯度来自
+          ``dL/dgamma = 上游_logits x x_new``，上游经 tied lm_head 的新列（随机非零）
+          回传，故第一步就能学到非零。
+
+        两者合起来：函数在输出端严格保真，而新参数从第 0/1 步起就有梯度。
+        """
         if src_grown:
             new_sd[new_p + ".ln_old.weight"] = old_sd[old_prefix + ".ln_old.weight"].clone()
             new_sd[new_p + ".ln_old.bias"] = old_sd[old_prefix + ".ln_old.bias"].clone()
-            src_gn, src_bn = old_sd[old_prefix + ".gamma_new"], old_sd[old_prefix + ".beta_new"]
         else:
             new_sd[new_p + ".ln_old.weight"] = old_sd[old_prefix + ".weight"].clone()
             new_sd[new_p + ".ln_old.bias"] = old_sd[old_prefix + ".bias"].clone()
-            src_gn = torch.zeros(0); src_bn = torch.zeros(0)
         n_new = d_new - grow_old_dim
-        gn = torch.zeros(n_new); bn = torch.zeros(n_new)
-        if src_gn.numel():
-            k = src_gn.numel()
-            assert k <= n_new, f"源的 gamma_new({k}) 比新的({n_new})还大"
-            gn[:k] = src_gn            # 源的新段原样搬过来
-            bn[:k] = src_bn
-        # 其余保持 0 → 新增维度是零旁支
-        new_sd[new_p + ".gamma_new"] = gn
-        new_sd[new_p + ".beta_new"] = bn
+        new_sd[new_p + ".gamma_new"] = torch.full((n_new,), float(gate))
+        new_sd[new_p + ".beta_new"] = torch.zeros(n_new)
 
-    # 嵌入：旧列照搬，新列 0
+    # 嵌入：旧列照搬；[grow_old_dim:] 一律重新随机。
+    # 这一段既包含本次新增的 384 列，也包含上一次生长遗留的 256 个死列——
+    # 它们必须一起复活，否则"函数保真"仍然成立，但新维度没有信号源，
+    # 下游新列拿到的输入仍然是 0，梯度仍然是 0。
+    gen = torch.Generator().manual_seed(1234)
     emb = torch.zeros(cfg.vocab_size, NEW_D)
-    emb[:, :OLD_D] = old_sd["embedding.weight"]
+    emb[:, :grow_old_dim] = old_sd["embedding.weight"][:, :grow_old_dim]
+    rev = emb[:, grow_old_dim:]
+    emb[:, grow_old_dim:] = torch.randn(rev.shape, generator=gen) * 0.02
     new_sd["embedding.weight"] = emb
 
     for i in range(NEW_L):
         p, q = f"blocks.{i}.", f"blocks.{i}."
-        fill(p + "msr.q_proj.weight", q + "msr.q_proj.weight", NEW_D, NEW_D)
-        fill(p + "msr.k_proj.weight", q + "msr.k_proj.weight", NEW_D, NEW_D)
-        fill(p + "msr.v_proj.weight", q + "msr.v_proj.weight", NEW_VD, NEW_D)
-        fill(p + "msr.g_proj.weight", q + "msr.g_proj.weight", NEW_VD, NEW_D)
-        fill(p + "msr.out_proj.weight", q + "msr.out_proj.weight", NEW_D, NEW_VD)
-        fill(p + "ffn.0.weight", q + "ffn.0.weight", NEW_VD, NEW_D)
-        fill(p + "ffn.2.weight", q + "ffn.2.weight", NEW_D, NEW_VD)
+        fill(p + "msr.q_proj.weight", q + "msr.q_proj.weight", NEW_D, NEW_D, gen)
+        fill(p + "msr.k_proj.weight", q + "msr.k_proj.weight", NEW_D, NEW_D, gen)
+        fill(p + "msr.v_proj.weight", q + "msr.v_proj.weight", NEW_VD, NEW_D, gen)
+        fill(p + "msr.g_proj.weight", q + "msr.g_proj.weight", NEW_VD, NEW_D, gen)
+        fill(p + "msr.out_proj.weight", q + "msr.out_proj.weight", NEW_D, NEW_VD, gen)
+        fill(p + "ffn.0.weight", q + "ffn.0.weight", NEW_VD, NEW_D, gen)
+        fill(p + "ffn.2.weight", q + "ffn.2.weight", NEW_D, NEW_VD, gen)
 
         # GroupNorm：按头成组拷贝，新头 weight=1 / bias=0
         gn_w = torch.ones(NEW_VD); gn_b = torch.zeros(NEW_VD)
@@ -192,10 +219,13 @@ def main():
         new_gamma[:OLD_H] = old_sd[q + "msr.gamma"]
         new_sd[p + "msr.gamma"] = new_gamma
 
-        grow_norm(p + "norm1", q + "norm1", NEW_D)
-        grow_norm(p + "norm2", q + "norm2", NEW_D)
+        # 中间层门控 = 1.0：新维度必须能流进 q/k/v 的新列，否则新列永远零梯度
+        grow_norm(p + "norm1", q + "norm1", NEW_D, gate=1.0)
+        grow_norm(p + "norm2", q + "norm2", NEW_D, gate=1.0)
 
-    grow_norm("final_norm", "final_norm", NEW_D)
+    # final_norm 门控 = 0.0：新维度在输出端被关掉，保证 logits 不变；
+    # 它的梯度仍非零（上游经 tied lm_head 的新列回传），所以会自己长开
+    grow_norm("final_norm", "final_norm", NEW_D, gate=0.0)
 
     new.load_state_dict(new_sd, strict=True)
     new.tie_weights()
@@ -221,10 +251,40 @@ def main():
         print("\n⚠️ 没加 --verify。**生长脚本不校验等于没生长**——"
               "配置文件漏搬（本项目真实踩过）会静默产出不保真的检查点。建议永远带上。")
 
-    # **校验失败就不落盘**：静默产出一个"生长过但不保真"的检查点，
-    # 会让后面无法区分 loss 尖峰来自生长还是来自别的（本项目已栽过同类静默错误）。
-    if verified is False:
-        print("❌ 校验未通过 —— 拒绝保存。请先修映射，别拿这个检查点训练。")
+    # ---- 可训性校验（E04）------------------------------------------------
+    # 函数保真只证明"生长没改坏旧模型"，它**不能**证明"新参数能学"：
+    # 一个恒零的旁支是最完美的函数保真，上面那条检查因此永远通过。
+    # 这里跑 5 步真实反向，逐参数看梯度是否非零。零梯度 = 这个参数
+    # 从第 0 步起就没有任何信号，训练多少步都不会变。
+    #
+    # 为什么是 5 步而不是 1 步：新维度是"级联自愈"的——
+    #   第 0 步：只有 embedding 新列、以及读新输入的列有梯度；
+    #   第 1 步：新列变非零，读它们的下游列开始有梯度；
+    #   第 2 步：新单元的输出投影（新行）拿到梯度。
+    # 5 步足够走完这条链；仍为零的参数就是真的死了。
+    print(f"[trainable] 跑 5 步反向，seq={args.seq}，统计零梯度参数 ...", flush=True)
+    new.train()
+    opt = torch.optim.AdamW(new.parameters(), lr=1e-4)
+    probe = torch.randint(1, cfg.vocab_size, (2, args.seq))
+    for _ in range(5):
+        opt.zero_grad(set_to_none=True)
+        out = new(probe, labels=probe)
+        out.loss.backward()
+        opt.step()
+    dead = [n for n, p in new.named_parameters()
+            if p.grad is None or p.grad.abs().max().item() == 0.0]
+    trainable = not dead
+    if dead:
+        print(f"[trainable] ❌ {len(dead)} 个参数梯度恒 0：")
+        for name in dead[:12]:
+            print("    ", name)
+    else:
+        print("[trainable] ✅ 全部参数梯度非零")
+
+    # **两道校验都过才落盘**：只保真但不可训的检查点，
+    # 静默产出的就是 v21 那种"67% 参数是 0"的模型。
+    if verified is False or not trainable:
+        print("❌ 校验未通过 —— 拒绝保存。先修映射/初始化，别拿这个检查点训练。")
         return 2
 
     new.save_pretrained(args.dst, safe_serialization=True)

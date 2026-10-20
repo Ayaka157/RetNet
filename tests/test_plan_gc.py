@@ -46,6 +46,11 @@ try:
     dA.mkdir()
     write_shard(dA / "shard_00000.npy", (SEQ + 1) * 100, seed=1)
     write_shard(dA / "shard_00001.npy", (SEQ + 1) * 100, seed=2)
+    # docs/00 E13：GC 删除前必须能证明"可重建"，所以阶段目录要有 meta.json。
+    (dA / "meta.json").write_text(json.dumps({
+        "source_ids": ["test/stage_a"],
+        "rebuild_cmd": "python scripts/build_flat_corpus.py --help",
+    }, ensure_ascii=False), encoding="utf-8")
     dB = tmp / "stage_b"          # 还没上传的空目录
     dB.mkdir()
 
@@ -92,6 +97,16 @@ try:
     check(freed > 0, f"gc 释放 {freed} 字节")
     check(not (dA / "shard_00000.npy").exists(), "阶段 a 的分片已被删除")
     check(not (dA / "shard_00001.npy").exists(), "阶段 a 的第二个分片也删了")
+
+    print("=== 4b) GC 安全：没有 meta.json 时拒绝删除（E13） ===")
+    dA2 = tmp / "stage_a2"
+    dA2.mkdir()
+    write_shard(dA2 / "shard_00000.npy", (SEQ + 1) * 10, seed=11)
+    ds4b = StagePackedDataset([{"name": "a2", "data_dir": str(dA2), "mode": "flat"}], SEQ)
+    ds4b.set_stage(0)
+    freed4b = ds4b.gc_stage(0)
+    check(freed4b == 0 and (dA2 / "shard_00000.npy").exists(),
+          "缺 meta.json -> 拒绝回收（文件仍在）")
 
     print("=== 5) GC 安全：共用目录 / 验证集目录都拒绝 ===")
     dD = tmp / "shared"
