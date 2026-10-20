@@ -48,7 +48,11 @@ def test_refresh_detects_same_size_replacement(tmp_path: Path):
     arr2[0] = 7
     np.save(p, arr2)
     import os
-    os.utime(p, None)
+    import time
+    # 显式把 mtime 推到 10 秒后：NTFS 的 mtime 粒度与写入速度可能让
+    # "刚写完"和"刚创建"落在同一纳秒刻度上，那样签名会意外相同。
+    future = int(time.time()) + 10
+    os.utime(p, (future, future))
 
     assert st.refresh() is True, "同尺寸分片被替换时 refresh 没有发现（E19 回归）"
     assert st.refresh() is False
