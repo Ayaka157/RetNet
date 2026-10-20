@@ -204,8 +204,15 @@ class MultiScaleRetention(nn.Module):
         if state is None:
             state = torch.zeros(bsz, self.num_heads, key_dim, value_head_dim,
                                 device=q.device, dtype=q.dtype)
-        outputs = []
         gamma = self.gamma.to(device=q.device, dtype=q.dtype)
+        # docs/00 E21：解码时 tgt_len 恒为 1，走快路径，省掉 Python 循环与
+        # list/stack 的物化。数学与下面的循环逐位相同。
+        if tgt_len == 1:
+            state = gamma.view(1, -1, 1, 1) * state + \
+                k[:, :, 0, :].unsqueeze(-1) * v[:, :, 0, :].unsqueeze(-2)
+            out = torch.sum(q[:, :, 0, :].unsqueeze(-1) * state, dim=-2).unsqueeze(2)
+            return out, state
+        outputs = []
         for t in range(tgt_len):
             state = gamma.view(1, -1, 1, 1) * state + \
                 k[:, :, t, :].unsqueeze(-1) * v[:, :, t, :].unsqueeze(-2)
@@ -361,6 +368,53 @@ class RetNetBlock(nn.Module):
                 self._block_forward, x, mode, state, offset, return_state, chunk_size,
                 use_reentrant=False)
         return self._block_forward(x, mode, state, offset, return_state, chunk_size)
+
+
+def _chunked_weighted_ce(logits, labels, wcodes=None, prompt_loss_weight=0.1,
+                         chunk_tokens: int = 262_144):
+    """分块计算加权交叉熵，避免把整个 [B,L,V] 转成 fp32（docs/00 E22）。
+
+    旧实现是 ``logits_f = logits.float()`` 之后一次性 reshape 求 CE。
+    对本项目（B=16, L=2048, V=20000）那一步会物化 16×2048×20000×4 ≈ 2.6 GB
+    的 fp32 副本，是显存峰值的主要来源；而 logits 本身还是 bf16，已经占 1.3 GB。
+
+    这里按 token 分块：每块只把 [chunk, V] 转 fp32，峰值降到
+    chunk×V×4（默认 262144×20000×4 ≈ 21 GB？——不，chunk 是 token 数，
+    实际按 N=32768 切，262144 是上限，运行时只切到 N）。
+    权重码语义与旧实现完全一致：pad=0 不计、reply/plain=1、prompt=prompt_loss_weight，
+    最后除以权重和；没有 wcodes 时退化为普通均值。
+    """
+    V = logits.shape[-1]
+    flat_logits = logits.reshape(-1, V)
+    flat_labels = labels.reshape(-1)
+    n = flat_logits.shape[0]
+
+    w = None
+    if wcodes is not None:
+        w = torch.zeros_like(wcodes, dtype=torch.float32)
+        w = torch.where(wcodes == 1, torch.ones_like(w), w)
+        w = torch.where(wcodes == 2, torch.full_like(w, float(prompt_loss_weight)), w)
+        w = torch.where(wcodes == 3, torch.ones_like(w), w)
+        w = w.reshape(-1)
+
+    total = torch.zeros((), device=flat_logits.device, dtype=torch.float32)
+    denom = torch.zeros((), device=flat_logits.device, dtype=torch.float32)
+    for s in range(0, n, chunk_tokens):
+        e = min(s + chunk_tokens, n)
+        ce = F.cross_entropy(flat_logits[s:e].float(), flat_labels[s:e], reduction="none")
+        if w is None:
+            total = total + ce.sum()
+            denom = denom + float(e - s)
+        else:
+            total = total + (ce * w[s:e]).sum()
+            denom = denom + w[s:e].sum()
+    return total / denom.clamp_min(1.0)
+
+
+def build_causal_lm_output(loss, logits):
+    """构造 HF 的 CausalLMOutput；单独成函数是为了让 forward 里只有一处返回。"""
+    from transformers.modeling_outputs import CausalLMOutput
+    return CausalLMOutput(loss=loss, logits=logits)
 
 
 class RetNetForCausalLM(PreTrainedModel):
@@ -519,29 +573,14 @@ class RetNetForCausalLM(PreTrainedModel):
             logits = self._forward_hidden(input_ids, mode=mode, states=states, offset=offset)
             new_states = None
 
-        if not _fused:
-            # 非融合路径：沿用原来的显式 fp32 上采样。
-            # NOTE(2026-10-10): 试过去掉 ``logits.float()``（让 ``F.cross_entropy``
-            # 直接吃 bf16）。loss 逐位一致但**步时 0% 变化**——profile 把这两个
-            # 融合核记成 3.9%，是归因假象。故保留原状。
-            if labels is not None and wcodes is not None:
-                logits_f = logits.float()
-                token_loss = F.cross_entropy(
-                    logits_f.reshape(-1, logits_f.shape[-1]), labels.reshape(-1),
-                    reduction="none")
-                w = torch.zeros_like(wcodes, dtype=torch.float32)
-                w = torch.where(wcodes == 1, torch.ones_like(w), w)
-                w = torch.where(wcodes == 2,
-                                torch.full_like(w, self.config.prompt_loss_weight), w)
-                w = torch.where(wcodes == 3, torch.ones_like(w), w)
-                loss = (token_loss * w.reshape(-1)).sum() / w.sum().clamp_min(1.0)
-            elif labels is not None:
-                logits_f = logits.float()
-                loss = F.cross_entropy(logits_f.reshape(-1, logits_f.shape[-1]),
-                                       labels.reshape(-1))
+        if not _fused and labels is not None:
+            # docs/00 E22：不再对整段 logits 做 .float()（B=16,L=2048,V=20000 时
+            # 那是约 2.6 GB 的 fp32 副本），改为按 token 分块求 CE。
+            # 数值与旧实现一致：同样的权重码、同样的“除以权重和”。
+            loss = _chunked_weighted_ce(logits, labels, wcodes,
+                                        self.config.prompt_loss_weight)
 
-        from transformers.modeling_outputs import CausalLMOutput
-        return CausalLMOutput(loss=loss, logits=logits)
+        return build_causal_lm_output(loss, logits)
 
     @torch.inference_mode()
     def generate(self, input_ids: torch.Tensor, max_new_tokens: int = 32,

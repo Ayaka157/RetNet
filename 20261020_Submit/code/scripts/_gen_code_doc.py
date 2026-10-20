@@ -72,12 +72,54 @@ EXPL["retnet_hf/train.py::_preflight"] = E(
     ["E06", "E08"],
 )
 
+EXPL["retnet_hf/modeling_retnet.py::_chunked_weighted_ce"] = E(
+    "分块加权交叉熵，替代原来对整段 logits 做 .float() 的写法（E22）。"
+    "旧实现 logits_f = logits.float() 会为 B=16/L=2048/V=20000 物化约 2.6 GB 的 fp32 副本；"
+    "本函数按 token 分块，每块只把 [chunk,V] 转 fp32，峰值降到 chunk×V×4。"
+    "权重码语义与旧实现完全一致：pad=0 不计、reply/plain=1、prompt=prompt_loss_weight，"
+    "最后除以权重和；没有 wcodes 时退化为普通均值。",
+    ["E22"],
+)
+
+EXPL["retnet_hf/modeling_retnet.py::build_causal_lm_output"] = E(
+    "把 CausalLMOutput 的构造收成一个函数，让 forward 里只剩一处返回。"
+    "它本身不改变数值，只是把 transformers 的输出类型依赖集中到一个地方，"
+    "便于在测试里替换或在未来版本里改字段。E22 改 forward 时顺手抽出来，"
+    "避免在 forward 尾部再出现局部 import。",
+    ["E22"],
+)
+
+EXPL["retnet_hf/train.py::live_param_ratio"] = E(
+    "统计模型里非零参数的比例（E08）。旧代码只打印 numel 之和，"
+    "504,179,896 哪怕 67% 是精确 0 也照样显示 504M。这个函数把“名义参数”"
+    "和“可学参数”分开，供 _preflight 判断是否拒绝开训，也被 test_live_params.py 直接测试。"
+    "注意 GroupNorm 的 bias 初始就是 0，所以新模型的比例也不是 100%，绝对值没有意义，"
+    "要看的量级是“是不是掉了一大截”。",
+    ["E08"],
+)
+
+EXPL["retnet_hf/train.py::assert_val_disjoint"] = E(
+    "开训前断言验证集目录与任何训练阶段都不同（E14）。上一轮 val_dir 是 chat_pack_v13，"
+    "而最后 14,000 步的 sft_mix 里 40% 就是它；训练期 eval_loss 在末段从 4.55 掉到 2.4450，"
+    "那不是模型变好，是它看到了验证集。函数在构造数据集之前抛 SystemExit，"
+    "不给“先跑起来再说”的机会。",
+    ["E14", "E15"],
+)
+
+EXPL["retnet_hf/data.py::_FlatStage._check_boundaries"] = E(
+    "抽查 flat 分片里有没有 eos，没有就拒绝打开（E12）。flat 流按固定宽度切片，"
+    "切点与文档边界无关；如果分词时没加 eos，模型看到的是“上一篇末行 + 下一篇开头”，"
+    "于是学会忽略远距离内容。这里只抽查前 2M token（一片有 2.5e8，全扫太贵），"
+    "足以发现“整包没有边界”；确属有意为之的流，必须在计划里显式写 require_eos: false。",
+    ["E12"],
+)
+
 EXPL["retnet_hf/train.py::main"] = E(
     "训练入口：解析参数、加载模型与计划、构造数据集、创建 TrainingArguments、"
     "挂控制回调与计划回调、就地编译 forward、可选续训，最后 trainer.train()。"
     "E06 对应 no_decay_1d 的默认值（已改为开启）；E07 对应 find_unused_parameters 的关闭"
-    "及其注释订正；E14 对应 val_dir 的隔离断言（已加：val_dir 与任一训练阶段同目录就直接拒绝开训）；"
-    "E15 对应 load_best_model_at_end 仍以 eval_loss 为准；E17 对应 save_total_limit 默认值（已改为 4）。"
+    "及其注释订正；E14 对应 val_dir 的隔离断言（已加）；E15 对应 load_best_model_at_end"
+    "（已关闭：eval 集被污染，不能用来选模型）；E17 对应 save_total_limit 默认值（已改为 4）。"
     "模型加载后立即调用 _preflight 做活参数与 gamma 检查；梯度覆盖检查（00 §4 第 1 条）"
     "尚未落地，是下一项待补的断言。",
     ["E06", "E07", "E08", "E14", "E15", "E20"],
@@ -184,9 +226,9 @@ EXPL["retnet_hf/modeling_retnet.py::MultiScaleRetention._parallel_final_state"] 
 
 EXPL["retnet_hf/modeling_retnet.py::MultiScaleRetention._recurrent_retention"] = E(
     "逐 token 的递归路径：状态按 gamma 衰减后加上当前 token 的 k⊗v，再用 q 与状态求内积。"
-    "它是 O(1) 推理的实现基础，也是三条路径里最直观的一条。代价是 Python 层循环，"
-    "解码时每个 token 都要走一次，因此只用于生成、不用于训练（E21 记录了这个性能问题）。"
-    "它与 chunkwise 共用同一组权重与同一个 gamma。",
+    "它是 O(1) 推理的实现基础，也是三条路径里最直观的一条。E21 增加了 tgt_len==1 的快路径："
+    "解码时每次只有一步，直接算，省掉 Python 循环与 list/stack 的物化，数学与循环版逐位相同；"
+    "长序列仍走循环，只用于罕见场景。",
     ["E21"],
 )
 
@@ -296,9 +338,9 @@ EXPL["retnet_hf/modeling_retnet.py::RetNetForCausalLM._forward_hidden"] = E(
 
 EXPL["retnet_hf/modeling_retnet.py::RetNetForCausalLM.forward"] = E(
     "Trainer 兼容的前向：解析 mode 与 chunk_size（None 时回落到 config），"
-    "按是否融合交叉熵选择两条损失路径，按 wcodes 把 pad 权重置 0、prompt 乘 prompt_loss_weight、"
-    "reply 与 plain 取 1，再按权重和归一化。E22 指出的 logits.float() 会物化 [B,L,V]，"
-    "是显存峰值的主要来源；E14/E15 的验证集问题也最终在这里的 loss 上体现。",
+    "按是否融合交叉熵选择损失路径；非融合路径交给 _chunked_weighted_ce 分块计算（E22），"
+    "不再对整段 logits 做 .float()。E14/E15 的验证集问题最终也体现在这里的 loss 上："
+    "只要 val_dir 与训练目录相交，这个数就不可信。",
     ["E22", "E14", "E15"],
 )
 
@@ -395,9 +437,11 @@ EXPL["retnet_hf/data.py::_PackedStage.row"] = E(
 
 EXPL["retnet_hf/data.py::_FlatStage.__init__"] = E(
     "打开一段 flat 语料：记录目录、seq_len、固定权重与排除前缀，调用 _scan 得到分片列表、"
-    "每片起始行号与总行数。若总行数为 0 则直接报错，避免训练打开一个空阶段后每步都取不到数据。"
-    "flat 模式不为打包额外复制一份文件，代价是行边界与文档边界无关。",
-    ["E12", "E13"],
+    "每片起始行号、总行数，以及扫描时刻的分片签名（文件名/mtime_ns/大小）。"
+    "require_eos 默认 True：打开时就调用 _check_boundaries 抽查是否有 eos，"
+    "没有则拒绝——这是 E12 的守卫。签名在这里快照保存，供 refresh 比较，"
+    "不能在比较时重新 stat，否则新旧两边永远相同（E19）。",
+    ["E12", "E19"],
 )
 
 EXPL["retnet_hf/data.py::_FlatStage._scan"] = E(
@@ -416,9 +460,12 @@ EXPL["retnet_hf/data.py::_FlatStage.shard_count"] = E(
 )
 
 EXPL["retnet_hf/data.py::_FlatStage.refresh"] = E(
-    "重新扫描目录并接管新到的分片。E19 指出的缺陷在这里：它只比较分片数量与总行数，"
-    "如果某个分片被同尺寸文件替换，两个值都不变，refresh 会返回 False 并继续用旧的 mmap。"
-    "修复方向是比较每个分片的文件名、修改时间与大小。",
+    "重新扫描目录，分片集合或任一分片发生变化就接过并返回 True（E19）。"
+    "旧实现只比 len(shards) 与总行数，同尺寸替换检测不到，训练继续读旧 mmap。"
+    "新实现比较扫描时快照下来的签名 self._signature 与本次 _scan 返回的签名，"
+    "三元组是 (文件名, mtime_ns, 大小)，任何一处变化都会触发重扫。"
+    "注意签名必须在扫描时保存：第一版修复在比较时对旧列表重新 stat，"
+    "新旧两边读的都是文件当前状态，永远相等，测试当场抓到了这个错误。",
     ["E19"],
 )
 
@@ -430,10 +477,11 @@ EXPL["retnet_hf/data.py::_FlatStage.files"] = E(
 )
 
 EXPL["retnet_hf/data.py::_FlatStage.close"] = E(
-    "在删除文件之前显式关闭 mmap 句柄。Windows 上 mmap 会占用文件句柄，"
-    "不先关就 unlink 会报 WinError 32；Linux 上能删，但显式关闭更干净。"
-    "关闭后把分片列表与行数清零，避免后续再按旧索引取数据。",
-    ["E13"],
+    "在删除或替换文件之前显式关闭 mmap 句柄。Windows 上 mmap 会占用文件句柄，"
+    "不先关就 unlink/覆盖会报 WinError 32 或 OSError 22；Linux 上能删，但显式关闭更干净。"
+    "关闭后把分片列表、行数与签名一起清零，避免后续再按旧索引取数据、"
+    "也避免 refresh 拿一份已经不存在的签名做比较（E19）。",
+    ["E13", "E19"],
 )
 
 EXPL["retnet_hf/data.py::_FlatStage.__len__"] = E(

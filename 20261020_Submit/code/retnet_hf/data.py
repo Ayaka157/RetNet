@@ -94,22 +94,59 @@ class _FlatStage:
     不必先花几小时生成一份 5 GB 的重复文件。
     """
 
-    def __init__(self, name, data_dir, seq_len, weight=1, exclude=None):
+    def __init__(self, name, data_dir, seq_len, weight=1, exclude=None,
+                 require_eos: bool = True):
         self.name = name
         self.data_dir = Path(data_dir)
         self.seq_len = seq_len
         self.weight = int(weight)
         #: 要跳过的文件名前缀，例如 ["skypile_"] 表示不用该来源（license 原因等）
         self.exclude = tuple(str(x) for x in (exclude or ()))
+        self.require_eos = bool(require_eos)
         self.shards = []
         self._starts = []
         self._rows = 0
-        shards, starts, total = self._scan()
+        shards, starts, total, sig = self._scan()
         if total == 0:
             raise FileNotFoundError(
                 f"阶段「{name}」在 {self.data_dir} 下没有可用的 *.npy（或文件都还没写完）")
         self.shards, self._starts, self._rows = shards, starts, total
+        self._signature = sig
+        # docs/00 E12：flat 流按固定宽度切片，切点与文档边界无关。
+        # 如果分词时没加 eos（--add-eos 曾经默认关闭），模型看到的就是
+        # "上一篇代码的末行 + 下一篇的 prompt"，它会学会忽略远距离内容。
+        # 这里在打开阶段时就抽查前 2M token，一个 eos 都没有就拒绝使用；
+        # 想强行用无边界流，必须在计划里显式写 require_eos: false。
+        if self.require_eos:
+            self._check_boundaries()
         self._wc = np.full(seq_len, self.weight, dtype=np.int64)
+
+    def _check_boundaries(self, sample: int = 2_000_000) -> None:
+        """抽查前 sample 个 token 里是否出现 eos；没有就拒绝。
+
+        eos id=2 由 tokenizer 固定（pad=0 / bos=1 / eos=2），见
+        `scripts/prepare_pretrain_v2.py` 的构造与 `bpe_tokenizer.json`。
+        不逐片全扫，是因为一片 2.5e8 token；抽查 2M 足够发现"整包没边界"。
+        """
+        if not self.shards:
+            return
+        per = max(1, sample // len(self.shards))
+        seen = 0
+        for _p, arr, _n in self.shards:
+            take = min(int(arr.shape[0]), per)
+            if take <= 0:
+                continue
+            seg = np.asarray(arr[:take])
+            seen += take
+            if int((seg == 2).sum()) > 0:
+                return
+            if seen >= sample:
+                break
+        raise ValueError(
+            f"阶段「{self.name}」的 flat 分片里抽查 {seen:,} 个 token 没有任何 <eos>。"
+            f"这条流没有文档边界，训练会让模型学会忽略远距离内容（docs/00 E12）。"
+            f"用带 --add-eos 的 build_flat_corpus.py 重建；"
+            f"如果你确认这是有意的，在计划里给该阶段写 require_eos: false。")
 
     def _scan(self):
         """扫描目录，返回 (shards, starts, rows)。
@@ -123,6 +160,7 @@ class _FlatStage:
         if self.exclude:
             files = [p for p in files if not p.name.startswith(self.exclude)]
         shards, starts, total = [], [], 0
+        signature = []
         for p in files:
             try:
                 arr = np.load(p, mmap_mode="r")
@@ -130,24 +168,36 @@ class _FlatStage:
                 continue          # 正在写入 / 损坏，等下次 refresh
             if arr.ndim != 1:
                 continue
+            st = p.stat()
             n = arr.shape[0] // width
             if n == 0:
                 continue
             shards.append((p, arr, n))
             starts.append(total)
             total += n
-        return shards, starts, total
+            signature.append((p.name, st.st_mtime_ns, st.st_size))
+        return shards, starts, total, tuple(signature)
 
     @property
     def shard_count(self) -> int:
         return len(self.shards)
 
     def refresh(self) -> bool:
-        """重新扫描目录；有新分片就接过，返回是否发生变化。"""
-        shards, starts, total = self._scan()
-        if len(shards) == len(self.shards) and total == self._rows:
+        """重新扫描目录；分片集合或任一分片发生变化就接过，返回是否发生变化。
+
+        2026-10-20（docs/00 E19）：旧实现只比 ``len(shards)`` 与总行数，
+        一个同尺寸的分片被替换时两个值都不变，函数返回 False，
+        训练继续用旧 mmap 读到已经过期的内容。
+
+        关键细节：签名必须在**扫描时**快照下来（``self._signature``），
+        不能在比较时对旧列表重新 stat——那样新旧两边读的都是文件当前状态，
+        永远相等，等于没比。第一版修复就踩了这个坑，测试当场抓到。
+        """
+        shards, starts, total, sig = self._scan()
+        if sig == self._signature:
             return False
         self.shards, self._starts, self._rows = shards, starts, total
+        self._signature = sig
         return True
 
     def files(self) -> list[Path]:
@@ -168,6 +218,7 @@ class _FlatStage:
             except Exception:                                   # noqa: BLE001
                 pass
         self.shards, self._starts, self._rows = [], [], 0
+        self._signature = ()
 
     def __len__(self):
         return self._rows
@@ -215,6 +266,8 @@ class StagePackedDataset(Dataset):
                 "gc": bool(s.get("gc", False)),
                 "min_shards": s.get("min_shards"),
                 "exclude": list(s.get("exclude") or []),
+                # docs/00 E12：默认要求文档边界，显式 false 才放行无边界流。
+                "require_eos": bool(s.get("require_eos", True)),
             })
         # 按 (name, data_dir) 复用已打开的阶段，避免热更新时重复 mmap
         reuse = {}
@@ -240,7 +293,8 @@ class StagePackedDataset(Dataset):
                 st = _PackedStage(sp["name"], sp["data_dir"], self._seq_len, sp.get("weight"))
             elif mode == "flat":
                 st = _FlatStage(sp["name"], sp["data_dir"], self._seq_len,
-                                exclude=sp.get("exclude"))
+                                exclude=sp.get("exclude"),
+                                require_eos=bool(sp.get("require_eos", True)))
             else:
                 raise ValueError(f"未知的 stage mode {mode!r}（阶段「{sp['name']}」）")
             self._cache[i] = st

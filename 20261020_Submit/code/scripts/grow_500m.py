@@ -69,6 +69,13 @@ OLD_VD, NEW_VD = 2048, 2816
 GROUP = 128                      # value_head_dim，两侧相同（2048/16 = 2816/22 = 128）
 TARGET_PARAMS = 504_179_896      # 与 probe_500m / meta device 三方对齐
 
+# 三个初始化常量，故意做成模块级：测试可以 monkeypatch 它们，验证
+# "把新行标准差改成 0（回到旧行为）时，可训性校验必须变红"。
+# 这不是为了配置灵活，是为了让 docs/00 E04 的守卫**可被证明会失败**。
+NEW_ROW_INIT_STD = 0.02     # 新权重的行（新单元的输出）标准差
+BLOCK_GATE = 1.0            # 中间层 norm 的新维度门控
+FINAL_GATE = 0.0            # final_norm 的新维度门控（输出端保真）
+
 
 def main():
     for s in (sys.stdout, sys.stderr):
@@ -154,7 +161,7 @@ def main():
         n_new_rows = out_d - ow.shape[0]
         if n_new_rows > 0:
             w[ow.shape[0]:, : ow.shape[1]] = \
-                torch.randn(n_new_rows, ow.shape[1], generator=gen) * 0.02
+                torch.randn(n_new_rows, ow.shape[1], generator=gen) * NEW_ROW_INIT_STD
         new_sd[p] = w
 
     def grow_norm(new_p, old_prefix, d_new, gate):
@@ -219,13 +226,13 @@ def main():
         new_gamma[:OLD_H] = old_sd[q + "msr.gamma"]
         new_sd[p + "msr.gamma"] = new_gamma
 
-        # 中间层门控 = 1.0：新维度必须能流进 q/k/v 的新列，否则新列永远零梯度
-        grow_norm(p + "norm1", q + "norm1", NEW_D, gate=1.0)
-        grow_norm(p + "norm2", q + "norm2", NEW_D, gate=1.0)
+        # 中间层门控 = BLOCK_GATE：新维度必须能流进 q/k/v 的新列，否则新列永远零梯度
+        grow_norm(p + "norm1", q + "norm1", NEW_D, gate=BLOCK_GATE)
+        grow_norm(p + "norm2", q + "norm2", NEW_D, gate=BLOCK_GATE)
 
-    # final_norm 门控 = 0.0：新维度在输出端被关掉，保证 logits 不变；
+    # final_norm 门控 = FINAL_GATE：新维度在输出端被关掉，保证 logits 不变；
     # 它的梯度仍非零（上游经 tied lm_head 的新列回传），所以会自己长开
-    grow_norm("final_norm", "final_norm", NEW_D, gate=0.0)
+    grow_norm("final_norm", "final_norm", NEW_D, gate=FINAL_GATE)
 
     new.load_state_dict(new_sd, strict=True)
     new.tie_weights()

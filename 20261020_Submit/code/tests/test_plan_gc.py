@@ -19,6 +19,15 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 
+# 远端（4070 笔记本）通过 ssh 跑时 stdout 是 GBK，打印 ✅/❌ 会抛
+# UnicodeEncodeError 并让测试在第一条断言处整段崩掉（2026-10-20 实测）。
+# 所有会打印符号的脚本式测试都必须在任何输出之前把 stdout/stderr 固定成 UTF-8。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:  # noqa: BLE001
+        pass
+
 from retnet_hf.data import StagePackedDataset
 from retnet_hf.plan import parse_plan
 
@@ -35,7 +44,11 @@ def check(cond, msg):
 
 def write_shard(path, n_tokens, seed=0):
     rng = np.random.default_rng(seed)
-    arr = rng.integers(1, 19999, size=n_tokens, dtype=np.int16)
+    # 从 3 开始取，避免随机出现 2 与注入的 eos 混淆；
+    # 每 32 个 token 注入一个 eos(2)：docs/00 E12 之后 _FlatStage 默认要求
+    # 分片里存在文档边界，不注入会直接拒绝打开。
+    arr = rng.integers(3, 19999, size=n_tokens, dtype=np.int16)
+    arr[::32] = 2
     np.save(path, arr)
     return path
 
