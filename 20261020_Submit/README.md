@@ -15,6 +15,7 @@
     00F1_修复对照.md            每个编号：修复后的完整代码段 + >=500 字说明
     01_训练代码逐函数解释.md     83 个函数，代码段由 AST 抽取，逐条标注 00 编号
     02_续训恢复计划_220元.md     ¥220 预算下的恢复计划（附父 Agent 审核注记）
+    03_模型结构变更.md          从原始 RetNet 到当前实现的逐项变更（GB/T 7714 引用）
   code/
     retnet_hf/*.py             训练/模型/数据/计划/内核完整包
     run_task.py                任务入口
@@ -85,5 +86,5 @@ python tests/test_plan_pipeline.py # 全部通过
 01 RetNet、02 xPos、03 GLA、04 Transformers are RNNs、05 GroupNorm、06 SwiGLU、
 07 Net2Net、08 Network Morphism、09 bert2BERT、10 StackBERT、11 MSLT、12 LiGO、
 13 ReZero、14 Fixup、15 Chinchilla、16 FineWeb、17 Skywork。
-01 与 00F1 的引用由生成器写入（`code/scripts/_refs.py` 是唯一编号源），
+03 单独采用 GB/T 7714—2015 顺序编码制，文中标注页码与章节；01 与 00F1 的引用由生成器写入（`code/scripts/_refs.py` 是唯一编号源），
 00 与 02 由 `code/scripts/_add_citations.py` 按小节插入；每篇末尾附参考文献表。
