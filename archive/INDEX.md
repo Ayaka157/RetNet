@@ -184,3 +184,6 @@ tracked trees, so the reversal is recorded as a rename rather than a delete.
 ## Open, deliberately not done
 
 - **Tier 3** (`pretrain_merged` int64→int16, `chat_pack_v3..v10`, `chat_recovery_mix`) and **Tier 4** (forbidden) were never in scope for this execution.
+
+
+- **20261024_verification/** — copied in from `E:\Workspaces\RetNet_Submissions_Review\20261024_verification` on 2026-10-24 at the owner's request; byte-identical (2/2 hashes matched). With `20261024_Submit_pre-audit/` it now forms the development mainline of record, documented in `CANONICAL.md` §0.

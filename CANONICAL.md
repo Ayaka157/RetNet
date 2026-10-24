@@ -7,6 +7,32 @@ Where something is still unknown it is marked **UNSURE** rather than guessed.
 
 ---
 
+## 0. Development mainline
+
+Designated 2026-10-24. Two directories are the **mainline of record**:
+
+| Directory | Role |
+| --- | --- |
+| `20261024_Submit_pre-audit/` | The audited source tree: `code/` (retnet_hf, run_task, scripts, tests), `docs/` (six documents, English), `_audit_fixed/AUDIT_REPORT.md`, `FIX_LOG.md`, `verify.py`, `MANIFEST.sha256`. |
+| `20261024_verification/` | The independent audit reports that gate it: `VERIFICATION_REPORT.md` (the 26 findings) and `MATH_AND_THEORETICAL_CONSISTENCY_AUDIT.md` (the 04 document against the papers). |
+
+Development continues from `20261024_Submit_pre-audit/code/`, and any change is expected to
+keep `python 20261024_Submit_pre-audit/verify.py` green. That gate was last run on
+2026-10-24 and passed all nine checks (A–I): 103 documented functions, 27 ids, consistent
+status tables in four places, and a complete 69-entry MANIFEST with zero hash mismatches.
+
+**These two directories are treated as immutable snapshots.** Their contents are deliberately
+not edited in place — the verification gate hashes all 69 files, so any edit would invalidate
+it. Corrections go into a new dated snapshot, not into this one.
+
+The rest of the repository remains the **working tree**: `retnet/`, `retnet_hf/`, `scripts/`,
+`tasks/`, `bench/`, `tests/`, `serve/` are what actually run, and they are not byte-identical
+to the snapshot. `config.json:auto_map` on Hugging Face still points at the working-tree
+module. When the two diverge, the snapshot is the reference for *what was audited*, and the
+working tree is the reference for *what executes*.
+
+---
+
 ## 1. Current dataset
 
 | | |
