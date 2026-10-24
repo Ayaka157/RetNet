@@ -1,7 +1,7 @@
 # RetNet：从零手写 → 中英角色扮演对话模型
 
 > 这是项目早期的中文 README，内容停在 **272M 阶段（2026-10 上旬）**，保留原样未改。
-> 当前模型的英文总览见 [`README.md`](README.md)；逐段历史见 [`docs/12_训练状态盘点.md`](docs/12_训练状态盘点.md)。
+> 当前模型的英文总览见 [`README.md`](README.md)；逐段历史见 [`docs/archive/restored-2026-10-24/12_训练状态盘点.md`](docs/archive/restored-2026-10-24/12_训练状态盘点.md)。
 > 文中引用的 `docs/paper/2307.08621v4.pdf` 因版权原因不随仓库分发，请从 [arXiv](https://arxiv.org/abs/2307.08621) 获取。
 
 依据论文 [Retentive Network: A Successor to Transformer for Large Language Models](https://arxiv.org/abs/2307.08621)
@@ -12,11 +12,11 @@
 
 | 想知道什么 | 看哪份 |
 | --- | --- |
-| 项目现在什么状态、最后一个检查点在哪 | [`docs/12_训练状态盘点.md`](docs/12_训练状态盘点.md) |
-| 模型什么水平、怎么评的、下一步做什么 | [`docs/13_基准测试重设计与评测结果.md`](docs/13_基准测试重设计与评测结果.md) |
+| 项目现在什么状态、最后一个检查点在哪 | [`docs/archive/restored-2026-10-24/12_训练状态盘点.md`](docs/archive/restored-2026-10-24/12_训练状态盘点.md) |
+| 模型什么水平、怎么评的、下一步做什么 | [`docs/archive/restored-2026-10-24/13_基准测试重设计与评测结果.md`](docs/archive/restored-2026-10-24/13_基准测试重设计与评测结果.md) |
 | **当前基准（1,020 项）怎么用、判据怎么写出题** | [`docs/14_基准测试v3.md`](docs/14_基准测试v3.md) · [`bench/CONTRACT.md`](bench/CONTRACT.md) |
 | 日常操作命令、故障处理 | [`RUNBOOK.md`](RUNBOOK.md) |
-| 全部文档入口 | [`docs/INDEX.md`](docs/INDEX.md) |
+| 全部文档入口 | [`docs/archive/restored-2026-10-24/INDEX.md`](docs/archive/restored-2026-10-24/INDEX.md) |
 
 ## 硬件与环境
 
@@ -129,7 +129,7 @@ MSR(X) = (swish(XW_G) ⊙ GroupNorm_h(heads)) W_O           swish 门控 + 每�
 > `encode_dialogues_batch(max_len=seq_len)` 都从尾部截。R1 数据中位输出 1,912 字符，
 > 被 `clean(output, 1200)` 砍掉一半——**正好砍掉 `</think>` 和答案**，于是模型只学会
 > 「开一个 think 块，永远不收尾」。扩窗时必须同时抬高字符上限
-> （v13 用 `--seq_len 2048 --r1_max_chars 4000`）。完整漏斗见 [`docs/13`](docs/13_基准测试重设计与评测结果.md) §2。
+> （v13 用 `--seq_len 2048 --r1_max_chars 4000`）。完整漏斗见 [`docs/13`](docs/archive/restored-2026-10-24/13_基准测试重设计与评测结果.md) §2。
 
 ## 快速开始
 
@@ -204,11 +204,11 @@ C:\Tools\Miniconda3\envs\AI\python.exe tests\test_runner_lockstep.py --stride 97
 | `retnet_272m_v10` | v10 482.3M（R1+百科），65k 步 | 272.3M | eval_loss 2.3031；基准 0.3848 略优于 rp（p=0.084，不显著），但 **26.5% think 泄漏** |
 | `retnet_272m_v13` | v13 552.3M @ seq 2048（完整 CoT） | 272.3M | 训练中（2026-10-09 夜） |
 
-> 完整盘点（每段的日志出处、计划与实际偏差）见 [`docs/12_训练状态盘点.md`](docs/12_训练状态盘点.md)；
-> 评测与路线重设计见 [`docs/13_基准测试重设计与评测结果.md`](docs/13_基准测试重设计与评测结果.md)。
+> 完整盘点（每段的日志出处、计划与实际偏差）见 [`docs/archive/restored-2026-10-24/12_训练状态盘点.md`](docs/archive/restored-2026-10-24/12_训练状态盘点.md)；
+> 评测与路线重设计见 [`docs/archive/restored-2026-10-24/13_基准测试重设计与评测结果.md`](docs/archive/restored-2026-10-24/13_基准测试重设计与评测结果.md)。
 >
 > `chat_sft` 那版「答非所问」的三个根因（提示词被重复惩罚、数据未按样本对齐、loss 未做回复掩码）
-> 与修法见 [`docs/02_训练管线.md`](docs/02_训练管线.md) §2 —— **别改回去**。
+> 与修法见 [`docs/archive/restored-2026-10-24/02_训练管线.md`](docs/archive/restored-2026-10-24/02_训练管线.md) §2 —— **别改回去**。
 
 ## 论文关键公式
 

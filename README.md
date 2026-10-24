@@ -17,9 +17,9 @@ training legs, 1,656,209,408 tokens in total.
 | Weights (final) | [`Ayaka157/RetNet-0.5B`](https://huggingface.co/Ayaka157/RetNet-0.5B) — epoch 3, val loss 1.9459 |
 | Weights (earlier legs) | [`RetNet-0.5B-ep1`](https://huggingface.co/Ayaka157/RetNet-0.5B-ep1) · [`RetNet-0.5B-ep2`](https://huggingface.co/Ayaka157/RetNet-0.5B-ep2) |
 | Weights (first chat model) | [`Ayaka157/RetNet-100M`](https://huggingface.co/Ayaka157/RetNet-100M) — 100,370,064 parameters, 2026-08-20 |
-| Technical report | [`docs/26_RetNet-0.5B_技术报告.md`](docs/26_RetNet-0.5B_技术报告.md) (Chinese) · [zh PDF](docs/latex/zh/RetNet-0.5B-技术报告.pdf) · [en PDF](docs/latex/en/RetNet-0.5B-Technical-Report.pdf) |
+| Technical report | [`docs/archive/restored-2026-10-24/26_RetNet-0.5B_技术报告.md`](docs/archive/restored-2026-10-24/26_RetNet-0.5B_技术报告.md) (Chinese) · [zh PDF](docs/latex/zh/RetNet-0.5B-技术报告.pdf) · [en PDF](docs/latex/en/RetNet-0.5B-Technical-Report.pdf) |
 | Figures | [`figures/`](figures/README.md) — every training curve as vector PDF + PNG + raw CSV |
-| Engineering log | [`docs/INDEX.md`](docs/INDEX.md) — 26 notes in Chinese, written while the work ran |
+| Engineering log | [`docs/archive/restored-2026-10-24/INDEX.md`](docs/archive/restored-2026-10-24/INDEX.md) — 26 notes in Chinese, written while the work ran |
 | Operations | [`RUNBOOK.md`](RUNBOOK.md) |
 | Earlier Chinese README | [`README.zh-CN.md`](README.zh-CN.md), frozen at the 272M stage |
 
@@ -48,7 +48,7 @@ Dates are when the artifacts were written, read off the checkpoint files.
 | 2026-10-13 | epochs 2 and 3 on an RTX PRO 6000, technical report, live serving |
 
 Per-stage perplexities and losses for the earlier generations are in
-[`README.zh-CN.md`](README.zh-CN.md) and [`docs/12_训练状态盘点.md`](docs/12_训练状态盘点.md).
+[`README.zh-CN.md`](README.zh-CN.md) and [`docs/archive/restored-2026-10-24/12_训练状态盘点.md`](docs/archive/restored-2026-10-24/12_训练状态盘点.md).
 
 ## Architecture
 
@@ -132,7 +132,7 @@ python run_task.py --config tasks/v17_ep3_500m_pro6000.json
 ```
 
 The cloud procedure, including the pre-flight probe and the watchdog, is in
-[`docs/24_AutoDL上机手册.md`](docs/24_AutoDL上机手册.md).
+[`docs/archive/restored-2026-10-24/24_AutoDL上机手册.md`](docs/archive/restored-2026-10-24/24_AutoDL上机手册.md).
 
 ## Serving
 

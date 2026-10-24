@@ -9,18 +9,22 @@
 
 ## 0. 当前状态
 
+> 下表是 **2026-10-09** 的快照，不是实时状态。272M 的两个 checkpoint 目录
+> （`retnet_272m_rp`、`retnet_272m_v10`）已从本地删除（见 `f66bd5c`），权重仅存于
+> Hugging Face。项目当前具备的能力（与运行状态无关）见 [`FEATURES.md`](FEATURES.md)。
+
 | 内容 | 路径 / 数值 |
 | --- | --- |
 | **模型（主线）** | RetNet **272.30M** — d_model 1024 / 20 层 / 16 头 / value_dim 2048 / ffn 2048 / `use_gla=true` / `use_growth_ln=true` / `growth_old_dim=768` |
-| **基准最优** | `checkpoints/retnet_272m_rp/`（20k 步，eval_loss 2.9946，基准加权总分 0.3587） |
-| 最新产物 | `checkpoints/retnet_272m_v10/`（65k 步，eval_loss 2.3031，加权总分 **0.3848**，**26.5% think 泄漏**） |
+| **基准最优** | `retnet_272m_rp`（20k 步，eval_loss 2.9946，基准加权总分 0.3587）— **本地目录已删除**，权重仅存于 Hugging Face |
+| 最新产物 | `retnet_272m_v10`（65k 步，eval_loss 2.3031，加权总分 **0.3848**，**26.5% think 泄漏**）— **本地目录已删除**，权重仅存于 Hugging Face |
 | 训练中 | `retnet_272m_v13` @ seq 2048，12,500 步，跑在远程机 |
 | 次要模型线 | `retnet_143m_rp`（142.9M，eval_loss 2.6534） |
 | 历史线 | `retnet_100m_*` 共 12 个目录（2026-08-19~08-23），已被取代 |
 | 训练入口 | `retnet_hf/train.py`（HF Trainer）+ `run_task.py --config tasks/*.json` |
 | 当前数据 | `data_cache/chat_pack_v13`（552.3M token @ seq 2048） |
 | 基准工具 | `scripts/bench_v3.py` + `bench/`（**1,020 项 × 15 类，难度分层，当前**）、`scripts/bench_v2.py`（143 项，历史）、`scripts/bench_engine.py` |
-| 状态盘点 / 评测 | `docs/12_训练状态盘点.md`、`docs/13_基准测试重设计与评测结果.md` |
+| 状态盘点 / 评测 | `docs/archive/restored-2026-10-24/12_训练状态盘点.md`、`docs/archive/restored-2026-10-24/13_基准测试重设计与评测结果.md` |
 
 ---
 
@@ -35,7 +39,7 @@
    模型很少见到推理时真正的输入 `<bos>用户：…\n助手：`。
 3. **loss 算在所有 token 上**：提问也参与训练，容量浪费在建模问题上。
 
-现在的设计（见 `docs/02_训练管线.md` §2）：
+现在的设计（见 `docs/archive/restored-2026-10-24/02_训练管线.md` §2）：
 
 - 每样本 = `<bos>[设定：persona\n]用户：{q}\n助手：{a}<eos>`，BOS 对齐、EOS 收尾、**截断保头**
 - 每 token 带权重码：`0` padding / `1` 助手回复 / `2` 提问与设定（权重 0.1）/ `3` 纯文本回放
@@ -249,7 +253,7 @@ C:\Tools\Miniconda3\envs\AI\python.exe run_task.py --config tasks\v13_272m_2k.js
 ```powershell
 Get-ChildItem E:\Workspaces\RetNet -Directory | ForEach-Object { $s=(Get-ChildItem $_.FullName -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum; "{0,-30} {1,8:N1} GB" -f $_.Name, ($s/1GB) }
 ```
-清理记录与可回收清单见 `docs/06_清理与运维.md`。
+清理记录与可回收清单见 `docs/archive/restored-2026-10-24/06_清理与运维.md`。
 
 ### 4.6 电脑睡眠 / 散热
 ```powershell
@@ -262,14 +266,14 @@ nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used --format=csv
 
 ## 5. 路线图
 
-**以 `docs/13_基准测试重设计与评测结果.md` §5 为准**。摘要：
+**以 `docs/archive/restored-2026-10-24/13_基准测试重设计与评测结果.md` §5 为准**。摘要：
 
 | 优先级 | 内容 |
 | --- | --- |
 | **P0** | **基准 v2 扩项**——现有 143 项里仍有大量题贴地板（结构化/数学）或贴天花板（角色扮演），区分度不足 |
 | **P1** | 重打包 v12：R1 数据剥离 `<think>` |
 | **P2** | 用 `retnet_272m_v10` 当负对照跑 v12 冒烟，确认泄漏率从 26.5% 归零 |
-| **P3-A** | 从 `retnet_272m_rp` 做 RP 特调（`docs/09` 阶段 B 原计划，**从未执行过**） |
+| **P3-A** | 从 `retnet_272m_rp` 做 RP 特调（`docs/archive/restored-2026-10-24/09_272M_v10_方案备份.md` 阶段 B 原计划，**从未执行过**） |
 | **P3-B** | 长上下文 4K——实测 12.34 s/step，跑满 30k 步要 103 小时 |
 | **P4** | 生产尺度等价性回归 + `.git` 初始化 |
 
@@ -277,7 +281,7 @@ nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used --format=csv
 
 - **在 272M 上追「综合能力」**：v10 的 65k 步在 143 项基准上只是**略优但不显著**
   （配对 McNemar p=0.084，总分 +0.026），代价 10 小时 46 分 + 一个 26.5% 的 think 泄漏。
-  结构化/数学是尺度限制（`docs/04` 早判过 CoT 有效下限在 0.5–1B），不是数据缺口。
+  结构化/数学是尺度限制（`docs/archive/restored-2026-10-24/04_路线与扩展研究.md` 早判过 CoT 有效下限在 0.5–1B），不是数据缺口。
 - **v11 的 8K/4K 路线**：`build_chat_mix_v11.py` 是在**已截断的 512 行上重切窗口**，
   截断在 v10 构建时就固化进 token 了，**重切救不回来**。两次运行都被人为中断、零产出。
 - **fp16**：两个种子在第 20、40 步就 `loss 0.0 / grad_norm NaN`，bf16 同期正常。
@@ -286,7 +290,7 @@ nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used --format=csv
 
 ## 6. 训练结果速查
 
-完整 18 阶段表格（含每段日志出处）见 `docs/12_训练状态盘点.md` §2。最近几段：
+完整 18 阶段表格（含每段日志出处）见 `docs/archive/restored-2026-10-24/12_训练状态盘点.md` §2。最近几段：
 
 | 阶段 | checkpoint | 数据 / 步数 | 结果 |
 | --- | --- | --- | --- |

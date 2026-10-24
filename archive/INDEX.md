@@ -84,6 +84,33 @@ tracked trees, so the reversal is recorded as a rename rather than a delete.
 | Verified | `git mv` recorded as renames (history preserved) |
 | Undo | `archive/_undo/T2_4.undo.ps1` |
 
+### T2.7 — abandoned fp16 branch
+
+| | |
+| --- | --- |
+| From | `retnet_hf_fp16/` |
+| To | `archive/retnet_hf_fp16/` |
+| Date | 2026-10-24 |
+| Files | 5 (tracked) |
+| Reason | Numeric-hardening fork written to chase the fp16 NaN; `RUNBOOK.md` §5 records fp16 as a rejected route. The owner confirmed it is early development and no longer in use. |
+| Duplicated elsewhere | no |
+| Live consumers | **seven diagnostic scripts** import it — `fp16_chunk_state`, `fp16_grad_first`, `fp16_loc_8k`, `fp16_locator`, `fp16_seq_scan`, `mem_profile`, `validate_fp16_fork` — and `tasks/v11_bf16_4k.json` / `tasks/v11_fp16.json` set `train_script` to it. No training or serving entry point imports it, and no test does. Those scripts raise `ModuleNotFoundError` loudly while it is archived. |
+| Verified | 5/5 hashes matched at destination |
+| Undo | `archive/_undo/T2_7.undo.ps1` |
+
+### D2 — restored notes moved into their own archive
+
+| | |
+| --- | --- |
+| From | `docs/` — the 21 files restored by T2.6 |
+| To | `docs/archive/restored-2026-10-24/` |
+| Date | 2026-10-24 |
+| Files | 21, **each stored as its own file** under its original name |
+| Reason | Restoring them to `docs/` created duplicate numbering (`02` twice, `04` twice) and made RUNBOOK's bare `docs/02` and `docs/04` references ambiguous. The owner directed that an archive be created and the files kept separately. |
+| Effect | live `docs/` is 7 files with no numbering collision; every reference in `README.md`, `RUNBOOK.md` and `README.zh-CN.md` was rewritten to the new paths |
+| Verified | 21/21 hashes preserved |
+| Undo | `git mv` each file back into `docs/`, then `git checkout -- README.md RUNBOOK.md README.zh-CN.md` |
+
 ### T2.8 — Kaggle notebook archive
 
 | | |
@@ -118,10 +145,13 @@ tracked trees, so the reversal is recorded as a rename rather than a delete.
 ## Not relocations (recorded for completeness)
 
 - **T2.5** `docs/_report_0p5b/` — was gitignored, now committed. No path change.
-- **T2.6** 21 docs restored from git history (`e11ece8^`, `6355e93^`). Additions, not moves.
+- **T2.6** 21 docs restored from git history (`e11ece8^`, `6355e93^`). Additions, not
+  moves — but they were subsequently relocated by **D2** above.
 - **T1.2** `20261024_Submit_pre-audit/` — was untracked, now committed. No path change.
+- **D2 / FEATURES.md** — new top-level `FEATURES.md` describes current capabilities only,
+  deliberately carrying no run state, losses or timestamps.
 
 ## Open, deliberately not done
 
-- **T2.7** `retnet_hf_fp16/` — deferred. Awaiting evidence on whether `scripts/fp16_*.py` and `scripts/audit_mem.py` are still run.
+- **T2.1b — HELD at the owner's request.** 28 `.py` files remain under `logs/`. Only 3 are redundant; **25 are the only copy on disk**, and several are operational tooling (release scrubbers, HF upload helpers, PDF bounds checkers, CPU sizing probes). A wholesale move into `archive/` would bury live tools to satisfy an acceptance criterion this plan invented, so nothing was moved. Awaiting a decision between: retire the criterion, promote the reusable tools into `scripts/`, or archive them wholesale.
 - **Tier 3** (`pretrain_merged` int64→int16, `chat_pack_v3..v10`, `chat_recovery_mix`) and **Tier 4** (forbidden) were never in scope for this execution.
