@@ -97,8 +97,12 @@ recoverable pre-purge marker is the tag `archive/pre-purge-20261019`.
 `.git/`, `data_cache/`, `checkpoints/` and `hf_cache/`.
 
 Three directories under `Kaggle/_audit/checks/` (`tmpa3758029`, `tmpadjufmpf`,
-`tmpr957s6fh`) carry ACLs that deny enumeration. They are gitignored sandbox
-artifacts and are recorded here so the manifest's blind spot is not silent.
+`tmpr957s6fh`) grant only SYSTEM, Administrators and OWNER RIGHTS with inheritance
+disabled, so the normal baseline pass could not enumerate them. They were read once
+under an elevated (UAC) read-only pass on 2026-10-24: they hold **six leftover test
+fixtures** from the checkpoint-resume harness, nothing else. Their hashes are
+appended to `MANIFEST.baseline.sha256` under a provenance comment. No `takeown` and
+no `icacls` change was made, so the directories remain as they were.
 
 ## 6. Still UNSURE
 

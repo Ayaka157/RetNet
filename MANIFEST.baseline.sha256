@@ -2236,3 +2236,16 @@ A240B1CD3F1E301BFC045704ECC3FDB6343FDE96DE19333C1A2575C356863753  _archive_from_
 C1E55515674371D3DE5A205BF819933F799AEE9F177545B9AB853FE0EE1EE3BD  _archive_from_instance\tasks\v22_ctx8k.json
 B9B9F72EF5BB06B263322B13A6472A2B02D7874568F0F5E93282C3816655694E  __pycache__\play_v2.cpython-313.pyc
 3249988D8CC4CA637812F7E49AEBB74577171F8DE76725D3649D5945CD55FC05  __pycache__\run_task.cpython-313.pyc
+
+# --- ACL-denied paths, hashed under elevation (UAC) on 2026-10-24 ---
+# The three directories below grant only SYSTEM, Administrators and OWNER RIGHTS,
+# with inheritance disabled, so the unelevated baseline pass could not read them.
+# A read-only elevated pass enumerated and hashed them: no takeown, no icacls
+# change, no file created or removed. Content is leftover test fixtures from a
+# checkpoint-resume harness (Kaggle/_audit/checks/harness.py).
+F8A762728E5354DF051E793768FAE296F68741F7616806849ADBE6FA7C616CF7  Kaggle\_audit\checks\tmpa3758029\out\checkpoint-10\training.pt
+2D711642B726B04401627CA9FBAC32F5C8530FB1903CC4DB02258717921A4881  Kaggle\_audit\checks\tmpadjufmpf\checkpoint-500\training.pt
+647942CEF0344423D6C19044825CEF258CA47126B3DD70EF209B27B800086DDD  Kaggle\_audit\checks\tmpr957s6fh\out\checkpoint-10\training.pt
+52063774827CDC6AEED6B72A2135E3C65EB8C114A790C69857C4D7937F80C1AF  Kaggle\_audit\checks\tmpr957s6fh\out\checkpoint-12\training.pt
+8DB0A88F919BDEF48D3880E9DB990FC6425AE2D3D569F47B44A09B5ACCC86DAA  Kaggle\_audit\checks\tmpr957s6fh\out\checkpoint-6\training.pt
+574A458192921762BCDA398F3D4CB70EC160463F315FC43C089BDC6997C4A872  Kaggle\_audit\checks\tmpr957s6fh\out\checkpoint-8\training.pt
