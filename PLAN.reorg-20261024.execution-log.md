@@ -157,3 +157,50 @@ same pattern as T2.1, pending approval.
 
 Note: `logs/_hf_login_from_file.py` is the script that reads `HF Access Token.txt`, which
 is why Tier 4 forbids moving that token file.
+
+---
+
+# Round 2 — owner decisions applied
+
+The owner answered the four open questions. Three were executed; one was held.
+
+| # | Owner answer | Action taken |
+| --- | --- | --- |
+| T2.7 | archive it ("early development and now no longer in use") | `retnet_hf_fp16/` -> `archive/retnet_hf_fp16/`, 5/5 hashes verified, undo `T2_7.undo.ps1` |
+| 2 | create an archive and store them separately, then write a new current-features document | 21 restored notes -> `docs/archive/restored-2026-10-24/` (each its own file, 21/21 hashes preserved); all references rewritten; `FEATURES.md` written |
+| 3 | **Hold — need information** | **no action taken**; inventory supplied instead |
+| 4 | mark them gone | RUNBOOK §0 annotated: both 272M checkpoints marked deleted locally, weights on HF; snapshot caveat added |
+
+### Clarification on the T2.7 instruction
+The answer read "ACHIEVE retnet_hf_fp16". Read literally, "achieve" is not an operation this
+plan defines. It was interpreted as **archive**, because the stated reason — "early
+development and now no longer in use" — is a reason to retire, and the owner's answer to
+question 1 was "as mentioned above". If the intent was something else, the reversal is
+`archive/_undo/T2_7.undo.ps1`, one command.
+
+### D1 final shape
+The "then turn to archive" half is now done. `docs/` holds 7 live files with no numbering
+collision; the 21 restored notes live under `docs/archive/restored-2026-10-24/` as separate
+files. References were rewritten in `README.md`, `README.zh-CN.md` and `RUNBOOK.md`, and the
+four bare `docs/02`, `docs/04`, `docs/09` references were expanded to full paths.
+
+### New document
+`FEATURES.md` describes the current capability set — architecture, training, data, serving,
+evaluation, tests, repository map, and the deliberate scope limits. It carries **no** losses,
+throughput, training progress, dates or "currently" statements, per the instruction that it
+represent current features and not real-time status.
+
+### Superseding acceptance status
+
+| # | Criterion | Previous | Now |
+| --- | --- | --- | --- |
+| 1 | manifest diff only on approved IDs | PASS | **PASS** — 904 removals, 898 byte-preserved, 6 ACL-blind, **0 unexplained** |
+| 2 | working tree clean | PASS | **PASS** |
+| 3 | undo script per item | PASS | **PASS** — 9 scripts |
+| 4 | relocation ledger complete | PASS | **PASS** — 9 ledger sections, incl. T2.7 and D2 |
+| 5 | data/weights untouched beyond T2.9 | PASS | **PASS** — `checkpoints` 29 files / 14,405.7 MB unchanged |
+| 6 | README and RUNBOOK zero missing links | PARTIAL | **PASS** — 0 and 0 |
+| 7 | no source left under `logs/` | FAIL | **FAIL — held by owner decision 3**, no action taken |
+
+In-place content changes across the whole execution: `.gitignore`, `README.md`,
+`README.zh-CN.md`, `RUNBOOK.md`. Everything else that changed location is byte-identical.
