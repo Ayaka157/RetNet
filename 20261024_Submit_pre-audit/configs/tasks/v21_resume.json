@@ -1,0 +1,33 @@
+{
+  "_comment": [
+    "v21 续训：从最近的 checkpoint-* 恢复（2026-10-18 19:37 误关机后使用）。",
+    "",
+    "与 v21_plan_ddp2.json 的区别只有 resume=true。其余参数必须完全一致，",
+    "否则 _sync_resume_state 会报警（它会用 trainer_state.json 里的 batch 覆盖命令行，",
+    "不一致时只打一行 WARNING，很容易漏看）。",
+    "",
+    "计划仍是 tasks/plan_ddp2.json 的 148,000 步（含新增的 code_ling2 段）。"
+  ],
+  "name": "v21_resume",
+  "model_dir": "checkpoints/retnet_500m_v15b_ep3",
+  "output_dir": "checkpoints/retnet_500m_v21",
+  "plan": "tasks/plan_ddp2.json",
+  "nproc": 2,
+  "master_port": 29500,
+  "precision": "bf16",
+  "mode": "chunkwise",
+  "chunk_size": 128,
+  "batch_size": 16,
+  "grad_accum": 1,
+  "dataloader_workers": 0,
+  "optim": "adamw_bnb_8bit",
+  "grad_checkpoint": false,
+  "compile": true,
+  "compile_mode": "max-autotune-no-cudagraphs",
+  "fast_chunkwise": true,
+  "save_total_limit": 4,
+  "seed": 1234,
+  "resume": true,
+  "auto_restart_max": 0,
+  "restart_wait_min": 3
+}

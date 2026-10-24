@@ -1,0 +1,611 @@
+{
+ "retnet_hf/train.py::main": {
+  "text": "Training entry point: parses arguments, loads the model and the plan, builds the datasets, creates TrainingArguments, attaches the control, decay, and gradient-coverage callbacks, compiles the forward pass in place, optionally resumes training, and finally calls trainer.train(). E06 covers no_decay_1d being enabled by default and DecayGuardCallback's assertion on the optimizer parameter groups; E07 covers GradCoverageCallback (counts zero gradients after step 1 and stops when the threshold is exceeded); E08 covers _preflight's live-parameter check (a new model is rejected below 95%, while a pruned checkpoint is admitted via --allow_dead_params or a historical baseline); E12 covers plan_stage_specs carrying require_eos into the dataset; E14 covers the three-layer check in assert_val_disjoint; E15 is load_best_model_at_end=False; E17's default value comes from the single constant in retnet_hf/defaults.py; P2-1 turns --eval_batches into a genuine cap on the number of evaluation rows. After training succeeds, live_params.json is written on rank 0 as the baseline for the next resume.",
+  "refs": [
+   "E06",
+   "E07",
+   "E08",
+   "E12",
+   "E14",
+   "E15",
+   "E20"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetForCausalLM.generate": {
+  "text": "Autoregressive generation: when the length is greater than 1, it runs parallel mode for prefill and takes the logits of the last position; each subsequent token then takes one recurrent step while incrementing offset. Sampling supports temperature, top-k, top-p, repetition penalty, and n-gram banning, and a callback can be invoked on every token. Before 2026-10-20 the parallel path performed two extra normalizations compared with the training path, so prefill did not match the training distribution (E16); those normalizations have been removed, but the junction between prefill and recurrent decoding should still be pinned down by a numerical regression test.",
+  "refs": [
+   "E16",
+   "E21"
+  ]
+ },
+ "retnet_hf/train.py::CompileSafeTrainer.get_decay_parameter_names": {
+  "text": "Decides which parameters receive weight decay. The parent class's default rule excludes only bias and LayerNorm.weight, whereas msr.gamma is a bare nn.Parameter that matches neither exclusion, so it was steadily shrunk multiplicatively by wd=0.1. When _no_decay_1d is enabled, this method removes every one-dimensional parameter (the norm scale, the gates, and gamma) from the decay set and prints the number removed on the first call. It is the fix point for E06: the default has been changed to enabled, and whether gamma is still in the decay set is now a hard assertion checked before training starts.",
+  "refs": [
+   "E06",
+   "E07"
+  ]
+ },
+ "retnet_hf/train.py::CompileSafeTrainer.save_model": {
+  "text": "Works around the OptimizedModule prefix problem introduced by torch.compile. When the model is wrapped in an OptimizedModule, every key in the state_dict carries the _orig_mod. prefix; loading such a checkpoint with from_pretrained raises no error, it simply discards all the keys as unexpected, so the result is a randomly initialized model. This method temporarily swaps self.model back to the inner model before saving and swaps it back afterwards, so the key names written to disk are clean and both the resume and the export path end up correct.",
+  "refs": []
+ },
+ "retnet_hf/train.py::plan_stage_specs": {
+  "text": "Converts Plan.stages into the list of dicts that StagePackedDataset requires, and is the only construction point on the plan JSON -> parse_plan -> dataset path. Both E12's require_eos and P2-2's weight must pass through it; the old implementation inlined this code in main() and dropped these two keys, while the tests built _FlatStage directly, so the defect where \"writing require_eos: false in the plan has no effect\" could never be caught by a test.",
+  "refs": [
+   "E12"
+  ]
+ },
+ "run_task.py::main": {
+  "text": "Task entry point: parses --config/--status/--dry/--monitor/--ctrl, checks the sticky stop flag, loads the configuration and prints a summary, sets the environment variables for fast_chunkwise and compile, then dispatches on the mode: dry prints the command, status prints the latest loss, monitor polls, and otherwise it loops launching training subprocesses. Automatic restarts are bounded by a maximum count and stop once the stop flag is detected; the subprocess exit code is propagated unchanged, so a crash is no longer recorded as a completed run.",
+  "refs": [
+   "E17",
+   "E20"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._init_weights": {
+  "text": "Initialization of this layer's weights: the q/k/v/g projections use Xavier with gain=2^-2.5, the out projection uses Xavier with gain=1, biases are set to zero, and gamma is explicitly skipped. The comment records a real incident: an early version used \"zero out every one-dimensional parameter\" as a catch-all, and since the only 1-D parameter was gamma, the gate was zeroed and log(0) produced NaN. That comment points in the same direction as this project's E02 lesson, but the growth script bypasses this initialization function, so it cannot protect the growth path.",
+  "refs": [
+   "E02"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetForCausalLM._init_weights_local": {
+  "text": "Model-level initialization: the embedding uses N(0,0.02), the FFN uses Xavier, the retention layers call their own _init_weights, and the output head also uses Xavier when the weights are not tied. It only takes effect when the model is built from scratch; from_pretrained overwrites these values with the numbers in the file, and the growth script likewise constructs the model first and then overwrites the state_dict, so this function cannot protect the growth path, which is exactly why E01–E03 could happen right under its nose.",
+  "refs": [
+   "E01",
+   "E02",
+   "E03"
+  ]
+ },
+ "scripts/grow_500m.py::main._check_norm_layout": {
+  "text": "Assertion on the segmented layout after growth (P1-8): the length of gamma_new/beta_new must equal NEW_D minus the cut point; the second segment must match the expected gate in its entirety (BLOCK_GATE for intermediate layers, FINAL_GATE for the final layer), and beta must be all 0. It runs before the 5-step trainability backward pass, guaranteeing that \"the mapping written in the documentation\" is the mapping that was persisted; the old version lacked this assertion, and the mapping written in the header disagreed with the code, so it could only be caught afterwards by --verify.",
+  "refs": [
+   "E02",
+   "E05"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._rotations": {
+  "text": "Builds the sin/cos rotation tables for a given length and starting offset: positions come from arange(offset, offset+length), the outer product with the frequency table gives the phases, and sin and cos are then taken separately. The offset lets autoregressive decoding keep using the correct position indices while generating token by token, instead of starting from 0 every time; this is also one of the preconditions for prefill and decode to join up. The whole computation is carried out in fp32 and then cast back to the input precision.",
+  "refs": []
+ },
+ "retnet_hf/train.py::build_parser": {
+  "text": "Extracts argparse into a pure function (E06/P1-3). Tests can then parse argv alone to assert switches such as --decay_1d -> no_decay_1d=False and --allow_dead_params, without having to bring up the Trainer; main() is only responsible for wiring the parse result onto the actual objects. The old implementation inlined the parser in main, so neither the parsing nor the wiring of these switches had any test coverage.",
+  "refs": [
+   "E06",
+   "E08"
+  ]
+ },
+ "retnet_hf/retention_fast.py::_decay_tables": {
+  "text": "Generates four decay tables from the per-head gamma: the intra-block mask, the cross-block decay, the value decay, and the whole-block decay. The key implementation detail is that everything stays in log space: exp(log gamma * delta), because the factorized form gamma^i * gamma^-j overflows fp32 to Inf when gamma<1 and the exponent is negative, and this project has really produced a whole-layer NaN. gamma is first clamped to a tiny positive number, ensuring that gamma=0 yields 0^0=1 and 0^k=0, consistent with the semantics of the reference implementation.",
+  "refs": [
+   "E16"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetForCausalLM._forward_hidden": {
+  "text": "Model backbone: the embedding is multiplied by embed_scale and passed through dropout, then the blocks are called layer by layer, and finally final_norm is applied. When return_hidden is true it returns the hidden states early and hands them to the fused cross-entropy, avoiding materializing a [B,L,V] tensor; otherwise they go through lm_head to produce logits. states carries the per-layer state when doing recurrent/chunkwise inference, and its length must match the number of layers or an error is raised immediately.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetForCausalLM.tie_weights": {
+  "text": "Re-establishes the weight-sharing relationship after from_pretrained. HF's loading path rebuilds parameters from the state_dict and may split two originally shared tensors into two copies; this method points lm_head.weight back at embedding.weight, ensuring that training and inference are driven by the same set of parameters. If the call is forgotten, the model carries an extra copy of the output head, the parameter count and GPU memory no longer match, and training updates only one of the two copies.",
+  "refs": []
+ },
+ "retnet_hf/data.py::StagePackedDataset.protect": {
+  "text": "Registers the directories (the validation set) that the GC must never delete, comparing them after normalization with provenance.norm_key. The training entry point calls it after computing val_path, and gc_stage consults this set before deleting. The old docstring described \"skip the validation-set directory\" as a safety constraint, but the function body contained no such check at all, so as soon as a plan stage had gc=true and pointed at the validation set, the validation set would be deleted outright.",
+  "refs": [
+   "E13",
+   "E14"
+  ]
+ },
+ "retnet_hf/data.py::PackedChatDataset.__getitem__": {
+  "text": "Fetches one row and splits it into three pieces: input_ids is row[:-1], labels is row[1:], and wcodes takes the corresponding shift of codes. All three are cast to int64 to suit the embedding and the cross-entropy. Note that wcode is shifted as well, because a weight code describes \"how much weight to use when predicting this label\" and must be aligned with the label rather than with the input.",
+  "refs": []
+ },
+ "retnet_hf/data.py::_PackedStage.__len__": {
+  "text": "Returns the number of rows in this stage, which the multi-stage dataset forwards and the sampler consumes. This value changes after a stage switch, while HF's RandomSampler caches the length only once at the start of each epoch, so the indices held by a stale sampler may fall outside the range of the new stage; the outer __getitem__ must take the row number modulo the length so that no IndexError is raised at the instant of the switch.",
+  "refs": [
+   "E19"
+  ]
+ },
+ "retnet_hf/train.py::cap_eval_rows": {
+  "text": "Translates --eval_batches into an upper bound on the number of validation-set rows: eval_batches times the evaluation batch size, where 0/None means no limit. The old implementation defined this parameter and both run_task branches passed 40, yet nothing in the code ever read it, a classic dead field. It now really caps the evaluation size and logs \"evaluating only the first N rows\".",
+  "refs": []
+ },
+ "retnet_hf/data.py::_FlatStage._scan": {
+  "text": "Scans every npy file in the directory, skips shards whose filename contains val (the validation set must never enter training), filters by excluded prefixes, mmaps each shard and computes how many rows can be cut from it, and accumulates the global row-start offsets. A shard that cannot be opened is skipped rather than crashing the run, because data may still be arriving from an external transfer and the next refresh will pick it up; this is the basis of \"train while transferring\".",
+  "refs": [
+   "E12"
+  ]
+ },
+ "retnet_hf/data.py::_FlatStage.__len__": {
+  "text": "Returns the total number of rows that can be cut, equal to the sum over all shards of the shard length divided by (seq_len+1); the remainder at the end of each shard that does not fill a row is discarded. Discarding the remainder is safe in itself, because the remainder cannot fill a single training sample; but it also means that a few tokens at the end of each shard are never trained on, and when there are many shards and each one is small, this waste needs to be accounted for separately.",
+  "refs": [
+   "E12"
+  ]
+ },
+ "retnet_hf/data.py::PackedChatDataset.__len__": {
+  "text": "Returns the number of rows. HF's RandomSampler reads this value at the start of each epoch to decide its sampling range, so when the dataset is switched mid-training the stale sampler may still be holding indices from the previous stage. This is also why the multi-stage dataset must apply modulo protection in __getitem__.",
+  "refs": [
+   "E19"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.active_index": {
+  "text": "Returns the index of the currently active stage. Plan callbacks, logging, and diagnostics all rely on it to confirm \"which segment is actually being trained right now\", and it is itself read-only. An actual switch must go through set_stage, so that \"open the target stage early\" and \"update the index\" happen atomically and there is no half-finished state where the index has already changed but the data still cannot be opened.",
+  "refs": [
+   "E12"
+  ]
+ },
+ "retnet_hf/train.py::GradCoverageCallback._make_hook": {
+  "text": "Builds the hook for a single parameter: during backward it takes the maximum absolute value of that parameter's gradient and, after taking the max with the historical value, records the result in _seen. The hook returns the gradient unchanged and does not alter any value; max rather than the latest value is used in order to cover the multiple micro-batches of gradient accumulation (as long as one micro-batch receives a nonzero gradient, the parameter is not dead).",
+  "refs": [
+   "E07"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.stage_ready": {
+  "text": "Decides whether stage i is usable right now, without raising an exception, returning only (bool, reason) so that the plan callback can decide whether to wait or to switch. It checks the index range, whether the stage can be opened, and whether the shard count has reached min_shards. This is the guard logic behind \"keep using the current stage while the data is still transferring and retry every N steps\".",
+  "refs": [
+   "E13"
+  ]
+ },
+ "retnet_hf/train.py::GradCoverageCallback._make_hook._hook": {
+  "text": "The body of the hook. It returns immediately when grad is None (the parameter did not take part in the graph); otherwise it records abs().max() into _seen. The function only reads the gradient and never modifies it, so it has zero effect on training numerics; its entire value is turning \"does this parameter receive any signal\" from something invisible into something that can be asserted.",
+  "refs": [
+   "E07"
+  ]
+ },
+ "run_task.py::load_config": {
+  "text": "Read the task JSON, choose the required fields according to whether a plan is present, validate that the plan file exists, and then fill missing values from DEFAULTS. What DEFAULTS centralizes are the defaults of the **launcher path**, not a single repo-wide set of defaults: `train.py`, as the low-level entry point, still keeps its own set (mode=parallel, precision=bf16, batch=10, max_steps=45000, warmup=1000, grad_checkpoint=False, compile=True), which differs from the launcher defaults (chunkwise / fp32 / 6 / 65000 / 500 / True / False). This divergence stems from the **entry-point positioning** and is not a defect; the precondition, however, is that the launcher passes the fields down explicitly every time, otherwise \"the config says it\" silently becomes \"the low-level default takes effect\". E17/E20 record exactly the two classes of incident that arise once this precondition is broken. The two fields that must stay consistent across entry points have already been extracted into `retnet_hf/defaults.py`: save_total_limit=4 and no_decay_1d=True, with both sites importing the same constant.",
+  "refs": [
+   "E17",
+   "E20"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._head_group_norm": {
+  "text": "Transpose [B,H,L,vhd] and flatten it into [B*L, H*vhd], hand it to GroupNorm, which normalizes per head group, and then restore the shape. A comment records one measurement: moving the normalization ahead of the permute is **in fact 9.2% slower** (190 vs 174 ms per micro-step) — the reference layout places the permute before the normalization, and that copy is absorbed by the elementwise normalization kernel; moved after it, the copy becomes the input of the external cuBLAS call out_proj and can no longer be fused into anything. Equivalence is guaranteed by a test (fp32 relative difference 1.6e-7). This layout is performance-sensitive, so a benchmark must be run before any change.",
+  "refs": []
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._decay_mask": {
+  "text": "Build the [H,L,L] decay mask: delta is the position difference, causal guarantees that only the past is visible, gamma raised to the power delta gives the exponential decay, and non-causal positions are explicitly set to 0. The current implementation no longer performs any row-wise normalization on the mask — on 2026-10-20 the former mask/sqrt(sum(mask)) was removed, because that step existed only on the parallel path and made training (chunkwise) and prefill (parallel) compute different functions (E16). The mask depends only on gamma and the position difference and itself contains no learnable parameters.",
+  "refs": [
+   "E16"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention.forward": {
+  "text": "Dispatch by mode to parallel, recurrent or chunkwise, then pass the output to GroupNorm, apply elementwise gating with silu(g), and run it through dropout and out_proj. All three paths share the same set of weights; after the two parallel-only normalizations were removed on 2026-10-20 they became mathematically consistent, and the only remaining difference is the chunking versus recurrence implementation (E16). Training uses chunkwise, generation prefill uses parallel, and decoding uses recurrent.",
+  "refs": [
+   "E16",
+   "E21"
+  ]
+ },
+ "retnet_hf/data.py::_FlatStage.__init__": {
+  "text": "Open a flat corpus segment: record the directory, seq_len, the fixed weight and the excluded prefixes, and call _scan to obtain the shard list, the first line number of each shard, the total number of lines, and the shard signature at scan time (filename / mtime_ns / size). require_eos defaults to True: on open it calls _check_boundaries to sample whether an eos is present and refuses the corpus if there is none — this is the E12 guard. The signature is snapshotted here so that refresh can compare against it; it must not be re-stat'ed at comparison time, otherwise the old and the new side would always be identical (E19).",
+  "refs": [
+   "E12",
+   "E19"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention.__init__": {
+  "text": "Build one multi-scale retention layer: compute key_dim and value_head_dim per head, register the per-head independent decay rate gamma (a learnable parameter when use_gla is on, with the initial value taken strictly as 1-2^(-5-h)), register the xPos frequency table, and create the five bias-free linear layers q/k/v/g/out plus one GroupNorm. The gamma initialization formula determines the distribution of the 22 heads from short memory to long memory; any change that sets it wholly to zero or wholly to one would break the multi-scale design.",
+  "refs": []
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._chunkwise_retention": {
+  "text": "The main training path: split the sequence into chunks, use the parallel decay mask inside each chunk, and pass the state recursively between chunks. The state update is S=gamma^C·S+k^T·(v·gamma^{C-1-j}), and the cross-chunk contribution is (q·gamma^{j+1})·S. It requires tgt_len to be divisible by chunk_size and otherwise raises an error immediately. Apart from E16, this path itself is correct, but it depends on the length of gamma: under the measured median, gamma^128 is roughly 1e-32, so cross-chunk information is effectively zeroed out.",
+  "refs": [
+   "E16"
+  ]
+ },
+ "retnet_hf/train.py::write_live_baseline": {
+  "text": "Write the live parameter count at the start of this run, the total count, this run's ratio, the historical minimum ratio (ratio_min) and the timestamp into output_dir/live_params.json (E08). It is called only on rank 0 and only after training has finished successfully; a write failure merely warns and does not invalidate a training run that has already completed. The next resumed run reads it from model_dir or output_dir and can then tell a \"known pruning state\" from \"this round killed the parameters again\" — in the latter case the ratio falls below the baseline and the guard still rejects it.",
+  "refs": [
+   "E08"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._project_and_rotate": {
+  "text": "Project the input x into the four tensors q/k/v/g, reshape them to [B,H,L,dim], apply rotary position encoding to q and k, and scale k by the inverse square root of key_dim. v and g receive no positional rotation because they do not take part in position-dependent inner products. The four returned tensors go into the retention computation and the output gate respectively; the scaling is written onto k rather than onto the scores so that the chunkwise and the recurrent path share the same single scaling.",
+  "refs": []
+ },
+ "retnet_hf/data.py::_FlatStage._check_boundaries": {
+  "text": "Sample whether the flat shards contain an eos and refuse to open them if none is found (E12). The flat stream is sliced at fixed width, so the cut points are unrelated to document boundaries; if no eos was added during tokenization, the model sees \"the last line of the previous document + the beginning of the next one\" and therefore learns to ignore long-distance content. Only the first 2M tokens are sampled (one shard holds 2.5e8, and a full scan would be too expensive), which is enough to detect that the pack has no boundary at all; a stream that is deliberately like this must explicitly write require_eos: false in the plan.",
+  "refs": [
+   "E12"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._recurrent_retention": {
+  "text": "The token-by-token recurrent path: the state is decayed by gamma, the current token's k⊗v is added, and q is then dotted with the state. It is the implementation basis for O(1) inference and also the most intuitive of the three paths. E21 added a fast path for tgt_len==1: decoding has only a single step each time, so it is computed directly, saving the Python loop and the materialization of list/stack, and it is bitwise identical to the loop version; long sequences still take the loop, which is used only in rare scenarios.",
+  "refs": [
+   "E21"
+  ]
+ },
+ "retnet_hf/data.py::_FlatStage.row": {
+  "text": "Fold the global row number into (shard, intra-shard offset) and then slice out a fixed-width token segment: input is chunk[:-1], label is chunk[1:], and the weight code is a constant for the whole segment. This is exactly where the core problem identified by E12 lies: the cut points are aligned only to the row width and are unrelated to document boundaries; the weight code is always 1, so every token carries equal weight. What the model thus learns is an arbitrary contiguous slice of 2048 tokens, and the cross-document noise teaches it to ignore long distance.",
+  "refs": [
+   "E12"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::theta_shift": {
+  "text": "Apply rotary position encoding to a tensor: first rotate by rotate_every_two, then multiply by cos and add the product of the original value and sin, yielding the equivalent of the complex multiplication (x·cos + rotate(x)·sin). Both q and k go through it, so their inner product depends only on the relative position difference — precisely where RetNet's relative position encoding comes from. The frequency table is registered as a buffer at initialization and does not take part in training.",
+  "refs": []
+ },
+ "retnet_hf/modeling_retnet.py::RetNetBlock._norm": {
+  "text": "Select the normalization implementation according to the config: when use_growth_ln is true, return GrowthLayerNorm and pass growth_old_dim; otherwise return an ordinary LayerNorm. It is the single entry point shared by the growth model and the ordinary model, which means that once growth_old_dim is misconfigured, the normalization cut point of the entire layer is misplaced. This is why the growth script must inherit the source model's original cut point (rather than the current width).",
+  "refs": []
+ },
+ "retnet_hf/train.py::GradCoverageCallback.on_step_end": {
+  "text": "When global_step reaches check_step (default 1), run one gradient coverage check: print the number of dead parameters, their element proportion and the first 12 names; if the proportion exceeds tol, raise SystemExit to stop. The original defect of E07 was that a comment claimed \"an additional gradient coverage check was added\" while the code contained none; that sentence now corresponds to this callback, and deleting it turns test_grad_coverage red.",
+  "refs": [
+   "E07"
+  ]
+ },
+ "retnet_hf/data.py::_PackedStage.__init__": {
+  "text": "Open a packed corpus segment: mmap train.ids.npy and train.wcode.npy, assert that ids is two-dimensional with width seq_len+1, and assert that ids and codes have consistent shapes. The weight parameter gives the whole segment a fixed weight (in that case the wcode file is not read). A failed assertion raises immediately; this is the scene of v22's second failure.",
+  "refs": [
+   "E14"
+  ]
+ },
+ "run_task.py::last_loss": {
+  "text": "Read trainer_state.json from the newest checkpoint directory and take the most recent n records that carry loss or eval_loss. It is used for --status and --monitor and does not take part in training. Note that it reads only the newest checkpoint: if the best checkpoint has been rotated away and deleted, this interface cannot see its history either.",
+  "refs": [
+   "E15"
+  ]
+ },
+ "retnet_hf/retention_fast.py::_index_tables": {
+  "text": "Cache the three index tables that depend only on chunk_size: the causal mask, the clamped exponent, and the position vector. The original implementation recomputed arange/sub/ge/clamp on every call, which is four kernel launches of pure overhead; almost all of this operator's cost is launch latency, so caching these tables is a real, measured gain. The cache key includes the device string, avoiding incorrect reuse across devices.",
+  "refs": []
+ },
+ "retnet_hf/data.py::ChatDataCollator.__call__": {
+  "text": "Stack a batch of dictionaries into tensors for the Trainer to consume directly. It performs no padding, because every row already has a fixed width and can simply be concatenated. Staying padding-free means no attention mask is needed, which is also one of the reasons RetNet's chunkwise forward pass does not have to handle variable-length sequences.",
+  "refs": []
+ },
+ "retnet_hf/fused_ce.py::fused_linear_cross_entropy": {
+  "text": "The public functional entry point; internally it calls FusedLinearCrossEntropy.apply. It wraps the custom autograd function in an ordinary function so that callers need not know that ctx exists. The shape conventions for hidden/weight/target/w are [N,D], [V,D], [N], [N].",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.update_stages": {
+  "text": "Replace the stage list (called when the plan is hot-updated) and reuse already-open stage objects by (name, data_dir), avoiding repeated mmap on a hot update. The active stage index is clamped into the range of the new list. It changes only the data source and leaves the DataLoader and the optimizer untouched; this is the implementation site of \"swap the corpus without a restart\".",
+  "refs": [
+   "E19"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.active_name": {
+  "text": "Return the name of the currently active stage, for logs, for printing by the plan callback, and for checkpoint metadata. It is recorded by name rather than by index because the plan file allows new stages to be inserted mid-training — once one is inserted, the index of the same corpus segment changes, and only the name still lines up with the historical logs, so that a later retrospective review does not mismatch records.",
+  "refs": []
+ },
+ "retnet_hf/data.py::_PackedStage.files": {
+  "text": "Return the list of on-disk files occupied by this stage, for use by GC. Only the two paths it registers itself, ids and wcode, are returned, and no directory-level deletion is performed, so that the blast radius of GC stays as small as possible. But \"minimal blast radius\" does not equal \"safe\": if this is the only copy, deleting it is still unrecoverable (see E13).",
+  "refs": [
+   "E13"
+  ]
+ },
+ "retnet_hf/train.py::DecayGuardCallback.__init__": {
+  "text": "Store the trainer reference and the switch state. It takes the trainer rather than relying on callback kwargs: transformers releases do not guarantee consistent keywords passed to on_train_begin, so it binds explicitly, the same strategy as the plan callback, to avoid the situation where \"it looks wired up yet is not actually in effect\".",
+  "refs": [
+   "E06"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.__len__": {
+  "text": "Return the number of rows of the currently active stage, forwarding the result of _stage(len). Note that this value changes as the stage switches; HF's sampler caches it at the start of the epoch, so the index at the instant of the switch may be out of range and __getitem__ must take the modulo.",
+  "refs": [
+   "E19"
+  ]
+ },
+ "retnet_hf/train.py::GradCoverageCallback._remove_hooks": {
+  "text": "After the check completes, remove all backward hooks so that a Python callback cost is not paid for nothing on every step (E07). It removes them one by one and swallows exceptions: a hook may already have been cleaned up automatically by PyTorch when the tensor was released, so the goal here is idempotence, not reporting cleanup failures.",
+  "refs": [
+   "E07"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::_chunked_weighted_ce": {
+  "text": "Chunked weighted cross-entropy, replacing the previous code that called .float() on the entire logits tensor (E22). The old implementation, logits_f = logits.float(), would materialize roughly 2.6 GB of fp32 copy for B=16/L=2048/V=20000; this function instead derives the number of tokens per chunk from a **byte budget** (64 MB by default, which is 838 tokens/chunk at V=20000), converts only [chunk,V] to fp32 per chunk, and therefore slices the production shape B=16/L=2048 into 40 chunks instead of the single chunk of the old implementation. The weight-code semantics are exactly identical to the old implementation: pad=0 is excluded, reply/plain=1, prompt=prompt_loss_weight, and the result is finally divided by the sum of weights; when there is no wcodes it degenerates to a plain mean. Passing chunk_tokens explicitly overrides the budget (used by tests).",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetHFConfig.__init__": {
+  "text": "Model configuration. The defaults supply vocab_size, d_model, num_layers, num_heads, dropout and norm_eps; value_dim and ffn_dim fall back to 2x d_model when not specified; use_gla controls whether gamma is a learnable parameter or a fixed buffer; use_growth_ln together with growth_old_dim decides whether normalization takes the two-segment form; checkpoint_layers controls layer-wise gradient checkpointing. These fields are persisted along with config.json, and the growth script must inherit them verbatim: failing to carry over any single one of them makes the grown model land on a different forward path.",
+  "refs": []
+ },
+ "retnet_hf/data.py::_FlatStage.refresh": {
+  "text": "Rescans the directory and takes over, returning True, whenever the shard set or any single shard has changed (E19). The old implementation compared only len(shards) and the total row count, so a same-size replacement went undetected and training kept reading the old mmap. The new implementation compares the signature snapshotted at scan time, self._signature, with the signature returned by this call to _scan; that triple is (filename, mtime_ns, size) and a change in any one of them triggers a rescan. Note that the signature must be saved at scan time: the first version of the fix re-stat'ed the old list at comparison time, so both sides read the file's current state and were always equal, and the test caught that mistake on the spot.",
+  "refs": [
+   "E19"
+  ]
+ },
+ "retnet_hf/train.py::_preflight": {
+  "text": "Hard checks before training starts, called after the model is loaded and before the Trainer is constructed. It does two things: first, it scans the weights and computes the numeric statistic 'fraction of nonzero parameters', and exits via SystemExit if that is below 95%, because the parameter count is tallied from config and would print 504M even if 67% of it were exactly 0 (E08); second, it collects every msr.gamma and prints the distribution, rejecting outright if any value is <=0, so that log(0) cannot turn a whole layer into NaN (E06). It only checks what can be checked before training starts; whether gamma is decayed during training is the job of a separate step-ratio assertion.",
+  "refs": [
+   "E06",
+   "E08"
+  ]
+ },
+ "retnet_hf/train.py::GradCoverageCallback.__init__": {
+  "text": "Registers a backward hook on every parameter with requires_grad and records the element count of each parameter (E07). A hook must not be registered on parameters with requires_grad=False, because PyTorch raises a RuntimeError immediately; such parameters never have gradients anyway, so keeping them in _numel is enough for them to be classified as dead parameters. The hooks must be registered at construction time and cannot wait until on_step_end: HF calls zero_grad after optimizer.step(), so by the time the callback fires p.grad is already None.",
+  "refs": [
+   "E07"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::ce_chunk_tokens": {
+  "text": "Derives from a byte budget how many tokens a cross-entropy chunk can hold: chunk_bytes // (4*V), at least 1 (E22). At V=20000 and a 64 MB budget that is 838 tokens/chunk, so the production shape B=16/L=2048 is sliced into 40 chunks. The old implementation fixed the chunk at 262144 tokens, independent of V and larger than the total number of production tokens, so there was only one chunk and the 2.6 GB fp32 copy stood there untouched. It is a separate function so that this arithmetic can be asserted directly.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/train.py::live_param_ratio": {
+  "text": "Computes the fraction of nonzero parameters in the model (E08). The old code printed only the sum of numel, so 504,179,896 still displayed as 504M even if 67% of it was exactly 0. This function separates 'nominal parameters' from 'learnable parameters' so that _preflight can decide whether to refuse to start training; it is also tested directly by test_live_params.py. Note that the GroupNorm bias is initialized to 0, so even a fresh model's ratio is not 100%; the absolute value is meaningless, and the magnitude worth watching is whether it has dropped by a large margin.",
+  "refs": [
+   "E08"
+  ]
+ },
+ "retnet_hf/train.py::read_live_baseline": {
+  "text": "Reads the live-parameter fraction that a historical run wrote into live_params.json (E08). The directories passed in are searched in order and the first value that parses and falls in (0,1] wins; ratio_min (the historical minimum) is preferred, so that slow erosion which quietly loses 1% per round and is then erased by a reset baseline does not slip past the guard. A missing or corrupt file returns None. Its purpose is to let training continue from a pruned checkpoint with 33% live parameters without manually toggling a flag every time: as long as the previous successful training start recorded a baseline and the ratio has not degraded noticeably, it passes automatically.",
+  "refs": [
+   "E08"
+  ]
+ },
+ "retnet_hf/train.py::check_live_ratio": {
+  "text": "The decision core of E08, a pure function whose four boundaries can all be tested directly: the ratio meets the threshold, pass; explicit --allow_dead_params, pass; a historical baseline exists and the ratio is not below baseline-tol, pass; anything else is rejected, and the error message gives both ways out, 'fix growth for the new model' and 'add the switch for a pruned checkpoint'. The old implementation had only a single hard rejection on ratio<0.95, which blocked the very first step of the rescue plan in docs/02 (its starting point is 33% live parameters).",
+  "refs": [
+   "E08"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetForCausalLM.forward": {
+  "text": "Trainer-compatible forward pass: resolves mode and chunk_size (falling back to config when None) and selects the loss path according to whether fused cross-entropy is used; the non-fused path is handed to _chunked_weighted_ce for chunked computation (E22) and no longer calls .float() on the entire logits tensor. The validation-set problems of E14/E15 ultimately surface in the loss here as well: as long as val_dir intersects the training directory, this number cannot be trusted.",
+  "refs": [
+   "E22",
+   "E14",
+   "E15"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetBlock.forward": {
+  "text": "Wraps a gradient checkpoint around _block_forward: it is enabled only in training mode and only when this layer's index is **less than** the checkpoint threshold (checkpoint_layers); at a layer index >= the threshold it is disabled. It uses the non-reentrant version, use_reentrant=False, to avoid conflicts with torch.compile graph capture. Checkpointing affects only GPU memory and recomputation and never the mathematics; when it is disabled, _block_forward is called directly.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "run_task.py::build_cmd_full": {
+  "text": "After build_cmd, appends conditional switches: gradient checkpointing, disabling compilation, compilation mode, gradient accumulation, optimizer, no_decay_1d, DDP unused parameters, resume, and finally wraps everything in torch.distributed.run when running on multiple GPUs. The E06 fix makes no_decay_1d enabled by default, yet here it is still appended only when the config is true, so the default must also stay enabled in train.py; the two sides cannot be kept consistent if only one of them is changed.",
+  "refs": [
+   "E06",
+   "E20"
+  ]
+ },
+ "retnet_hf/train.py::assert_val_disjoint": {
+  "text": "Asserts before training starts that the validation directory differs from every training stage (E14). In the previous round val_dir was chat_pack_v13, and 40% of sft_mix in the last 14,000 steps was exactly that; during training eval_loss dropped from 4.55 to 2.4450 in the final stretch, not because the model got better but because it had seen the validation set. The function raises SystemExit before the datasets are constructed, giving no chance to 'just get it running first'.",
+  "refs": [
+   "E14",
+   "E15"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetBlock.__init__": {
+  "text": "Builds one RetNet block: a MultiScaleRetention, two normalizations (note that the order is pre-LN) and one FFN. When use_swiglu is true the FFN implements SwiGLU with the three gate/up/down projections; otherwise it uses two linear layers plus GELU. checkpoint_layers records whether this layer does gradient checkpointing, with a default of -1 meaning that it follows the global switch.",
+  "refs": []
+ },
+ "retnet_hf/data.py::_FlatStage.close": {
+  "text": "Explicitly closes the mmap handle before deleting or replacing files. On Windows mmap holds a file handle, and an unlink/overwrite without closing first raises WinError 32 or OSError 22; on Linux the deletion succeeds, but an explicit close is cleaner. After closing, the shard list, the row count and the signature are all zeroed together, so that no later lookup pulls data by a stale index and refresh does not compare against a signature for something that no longer exists (E19).",
+  "refs": [
+   "E13",
+   "E19"
+  ]
+ },
+ "retnet_hf/train.py::DecayGuardCallback.on_train_begin": {
+  "text": "Asserts when training begins (the optimizer already exists at that point): after enabling --no_decay_1d, no 1-dimensional parameter may sit in a parameter group with weight_decay>0; if one does, SystemExit is raised and the first 12 names are listed. This is the runtime guard for E06: the old test assigned _no_decay_1d to the trainer by hand, so deleting the wiring code would not turn it red; this callback inspects the real grouping of the final optimizer.",
+  "refs": [
+   "E06"
+  ]
+ },
+ "retnet_hf/train.py::verify_export": {
+  "text": "Post-export self-check: reads the safetensors header JSON, checks that no key name carries the _orig_mod. prefix, and confirms that the file exists. It validates only the shape of the key names, not the values, so it cannot detect all-zero parameters or dead dimensions; that is exactly the point E08 makes: passing this check does not mean the model can train or can be used, only that loading will not fail silently. The newly added live-parameter statistics and gradient-coverage check are what fill this gap.",
+  "refs": [
+   "E08",
+   "E23"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::build_causal_lm_output": {
+  "text": "Collects the construction of CausalLMOutput into a single function, leaving only one return statement in forward. It does not change any numerics by itself; it merely concentrates the dependency on the transformers output type in one place, so that it can be substituted in tests or have its fields changed in a future version. It was pulled out in passing while E22 touched forward, to avoid yet another local import at the tail of forward.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/fused_ce.py::_fused_backward": {
+  "text": "The backward pass of the fused cross-entropy: it recomputes logits and softmax over the same chunks, subtracts the onehot, multiplies by the weight code and the upstream gradient, and accumulates the gradients with respect to the hidden states and the output head weights separately. The cost is one extra LM head GEMM in the backward pass; what it buys is that [N,V] never has to be resident in GPU memory at all. The weight-code semantics are fully identical to the loss in modeling.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.files": {
+  "text": "Returns the list of files occupied by the currently active stage, for diagnostics and logging only; actual deletion must go through gc_stage. Splitting 'view' and 'delete' into two entry points is meant to stop some code path from calling files() and then unlinking directly, bypassing the same-directory check and the validation-set check inside gc_stage; in the previous round the entire corpus was deleted, and what was missing was exactly this single unified entry point.",
+  "refs": [
+   "E13"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.__getitem__": {
+  "text": "Fetches one row of the current stage and takes the row index modulo the length, so that stale indexes cannot go out of bounds after a re-segmentation. It returns three tensors: input_ids, labels and wcodes. The modulo is a silent fallback: it keeps training from crashing, but it also masks the fact that the index has in fact gone stale; when the stage is empty it raises IndexError, which is the only exception that will ever be seen.",
+  "refs": [
+   "E19"
+  ]
+ },
+ "retnet_hf/data.py::_PackedStage.row": {
+  "text": "Fetches row idx and returns input, label and the weight code. Rows of packed data are pre-sliced by seq_len+1 and the cut points are decided by the packing script, so the quality of the boundaries here depends entirely on whether the packing split along conversation/document boundaries. The v13 flatten-and-reslice broke exactly this step's boundaries.",
+  "refs": [
+   "E12"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetForCausalLM.set_checkpoint_layers": {
+  "text": "Sets the policy 'apply gradient checkpointing only to the first n layers': writes n into config and synchronizes it to every block. It must be called after HF enables global gradient checkpointing, otherwise it is overridden by the global switch. The purpose of layering it is to trade a fixed GPU memory footprint for a larger physical batch; it is a performance knob and does not change the model mathematics.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset._stage": {
+  "text": "Opens stage i on demand: selects packed or flat according to mode (when the mode is auto it looks for train.ids.npy in the directory), constructs the corresponding stage object and caches it, and prints the stage name and row count. Any construction failure raises loudly here, rather than only being discovered at sampling time.",
+  "refs": [
+   "E12"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.__init__": {
+  "text": "Construction of the multi-stage dataset: stores seq_len, clears the spec and the stage cache, sets the active stage to 0, and then calls update_stages to build the stage list. Stages are opened lazily, so nothing is mmapped before its turn, which is what allows the next stage's data to be uploaded in the middle of training.",
+  "refs": [
+   "E12"
+  ]
+ },
+ "retnet_hf/train.py::GradCoverageCallback.check_now": {
+  "text": "Immediately aggregates and returns the list of dead parameters, and at the same time removes the hooks and sets _done. Exposing this method separately lets a test build a model, run one backward pass and then assert the classification result directly, without starting a Trainer; on_step_end is only its scheduling shell.",
+  "refs": [
+   "E07"
+  ]
+ },
+ "retnet_hf/retention_fast.py::chunkwise_batched": {
+  "text": "Batched chunkwise kernel: it splits the sequence into chunks, computes the state contribution of every chunk with a single batched matmul, then runs an exclusive scan over the closed-form lower-triangular matrix T to obtain the state preceding each chunk, and finally computes the intra-chunk and cross-chunk contributions separately. There are 5 batched matmuls in total (U, S_all, qk, inner, cross), independent of the number of chunks; the closed-form solution avoids nc serial loop iterations, which is why it is an order of magnitude faster than the reference implementation. Mathematically it is **the same function as _chunkwise_retention, equivalent down to floating-point rounding rather than bitwise identical** (measured max|delta| 1.9e-6 at gamma=0.5 and 1.5e-5 at gamma=0.99, tests/test_fast_chunkwise.py); it reads gamma only and performs no normalization at all.",
+  "refs": [
+   "E16"
+  ]
+ },
+ "retnet_hf/train.py::_sync_resume_state": {
+  "text": "State alignment before resuming training. HF's Trainer overrides the command-line arguments with the batch size recorded in the checkpoint's trainer_state.json, and when optimizer.pt is missing it does not even restore the learning-rate scheduler. This function compares only the four fields that HF actually adopts: train_batch_size, logging_steps, eval_steps and save_steps; when they disagree it first backs up the original content and then rewrites it in place, preventing the silent downgrade of writing 16 on the command line while actually running 1. grad_accum and max_steps are not on this list: they are not overridden by trainer_state.json, so putting them into the alignment table would only create the illusion of having changed something that in fact has no effect.",
+  "refs": []
+ },
+ "retnet_hf/data.py::StagePackedDataset.gc_stage": {
+  "text": "Deletes the data files of stage i and returns the number of bytes freed. All four safety constraints are enforced **inside the function body**, not merely promised in documentation: only files registered for this stage are deleted; directories referenced by another stage are skipped; directories registered as the validation set via protect() are skipped; and the directory must contain a meta.json that proves it is rebuildable. Rebuildability is accepted in three forms: rebuild_cmd (a complete argv), source_ids, or, for the legacy pipeline, sources+text_fields. There is no 'rebuildable within two hours' time constraint: that was only wording in the earlier generator, and the code was never able to verify it.",
+  "refs": [
+   "E13"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._parallel_retention": {
+  "text": "Parallel path: compute the inner product of q with the transpose of k, multiply it by the decay mask, and finally multiply by v. On 2026-10-20 the line that divided scores by their row-wise sum of absolute values was removed: it was a second normalization unique to parallel, absent from both chunkwise and recurrent, and it made training and inference non-equivalent (E16). This path now differs from chunkwise only in how the sequence is blocked, not in the mathematics; however, the concatenation that uses parallel for prefill and recurrent for decoding still needs a numerical regression test to lock it down.",
+  "refs": [
+   "E16"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::GrowthLayerNorm.forward": {
+  "text": "The forward pass has two segments: the first old_dim dimensions go through ln_old to give a normalized result, while the remaining new_dim-old_dim dimensions receive only the affine transform x*gamma_new+beta_new with no normalization; the two are then concatenated. The new dimensions are not normalized, so gamma_new is their only scaling gate; when it is 0 and the input is also 0, this segment is identically 0, and every link of the backward chain contains a zero factor. This is the identically-zero structure described in E05; the fix does not change the mathematics here, it only guarantees that gamma_new starts at a nonzero value and is not decayed during training.",
+  "refs": [
+   "E05",
+   "E02"
+  ]
+ },
+ "scripts/grow_500m.py::main.grow_norm": {
+  "text": "Resets the new-segment gates of the two-part norm. The intermediate layers must be 1: the new dimensions must be able to flow into the new columns of q/k/v, otherwise those new columns receive identically zero input and an identically zero gradient. final_norm must be 0: it is the only exit from the new dimensions to the logits, and zeroing it is what keeps the logits unchanged after growth; its gradient comes from the upstream logits multiplied by the new dimensions, and the upstream path returns through the new columns of the tied lm_head (random, hence nonzero), so it learns a nonzero value from the very first step. The weights and bias of the old segment ln_old are inherited unchanged, which keeps the normalization statistics of the old dimensions exactly as they were.",
+  "refs": [
+   "E02",
+   "E05"
+  ]
+ },
+ "run_task.py::build_cmd": {
+  "text": "Translates the configuration into the command line for train.py. With plan present it takes the plan mode branch and passes only the model/output/plan/batch size/precision and similar arguments, delegating the data sources and the total step count to the plan file. On 2026-10-20 the plan branch gained the previously missing eval_batch_mult (E20): it had always fallen back to the train.py default of 4, which kept evaluation GPU memory too high. save_steps and eval_steps are written into args at runtime by the plan callback; the command-line defaults exist only briefly, before the callback takes effect.",
+  "refs": [
+   "E20"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::MultiScaleRetention._parallel_final_state": {
+  "text": "Computes the recurrent state at the end of a full sequence in one shot: for each position it weights by gamma raised to the power (tgt_len-1-i) and then applies an einsum, producing [B,H,kd,vd]; if a historical state already exists, that state is decayed by gamma^tgt_len and added. It is called only when return_state is true, so that decoding can switch to a per-token loop after prefill. Note that it uses the full sequence length as the decay exponent, which is mathematically consistent with the per-chunk decay used by chunkwise.",
+  "refs": []
+ },
+ "retnet_hf/data.py::PackedChatDataset.__init__": {
+  "text": "Loads the already packed two-dimensional ids and wcode and asserts that the shape is (rows, seq_len+1) and that the two agree. The row width is seq_len+1 rather than seq_len because the same row has to supply both the input and the shifted label. The assertion matters a great deal here: the first failure of v22 was a validation-set width of 2049 that did not match the expected 16385, and at the time it only raised an AssertionError even though the root cause was applying the wrong data pack.",
+  "refs": [
+   "E14"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::GrowthLayerNorm.__init__": {
+  "text": "Construction of the two-part LayerNorm: the old dimensions use an ordinary LayerNorm(old_dim), while the new dimensions use two learnable vectors, gamma_new and beta_new, for a per-channel affine transform. The defaults gamma_new=1.0 and beta_new=0 are the 'the new dimensions are trainable' defaults; the problem in E02 was precisely that the growth script overwrote it with 0, so the new dimensions were shut off by a multiplicative gate and the gradients were shut off along with them. The default is correct; the fault lies in the one line that overrides it.",
+  "refs": [
+   "E02",
+   "E05"
+  ]
+ },
+ "scripts/grow_500m.py::main.fill": {
+  "text": "Places the old weights into the top-left corner of the new matrix and decides the initial values of the added rows and columns. New columns must be zeroed: otherwise they would immediately change the output of the old dimensions, the function would no longer be faithful, and that perturbation could not be blocked by any gate. New rows must be random: all zeros would make the new units output identically zero, the downstream columns reading them would receive zero input, and the gradient would be identically zero as well, which is exactly where the 3.38e8 dead parameters of the previous round came from. Random new rows let the new units produce output first, so the downstream columns receive a gradient at step 1, and once the new columns become nonzero the new rows receive a gradient at step 2, forming a self-healing cascade.",
+  "refs": [
+   "E01",
+   "E04"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetForCausalLM.__init__": {
+  "text": "Assembles the full model: the token embedding, several RetNetBlocks, a final normalization and the output head. When tie_weights is true, lm_head.weight is pointed at embedding.weight, so the two share one parameter tensor; the new columns of the embedding are therefore also the new columns of the classifier, and growth has to account for both the input and the output semantics at the same time. After construction it calls _init_weights_local to perform initialization.",
+  "refs": [
+   "E03"
+  ]
+ },
+ "retnet_hf/data.py::_proves_rebuildable": {
+  "text": "Decides whether meta.json is sufficient to prove that this data is rebuildable (E13): rebuild_cmd or source_ids are accepted directly; the legacy pipeline, which has only sources+text_fields, is also accepted, because both the field names and the glob patterns are present, which is enough to rerun under the same specification. The old implementation accepted only the first two keys, and the pipeline at that time wrote neither of them, so GC always refused to delete and the 6 stages marked gc:true in the plan freed 0 bytes.",
+  "refs": [
+   "E13"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetHFConfig.key_dim": {
+  "text": "Computes the key dimension of a single attention head, equal to d_model divided by num_heads. RetNet's retention score is the per-head inner product of q and k, and key_dim determines the representation width of each head; it is also used by the rotary position encoding (xPos) to size the frequency table, so this property must not be read until both d_model and num_heads are fixed, and the configuration does not allow it to be overridden on its own.",
+  "refs": []
+ },
+ "scripts/grow_500m.py::main": {
+  "text": "Main width-growth flow: validate the source model's shapes, inherit the original normalization split point and the non-weight configuration, construct the new model, map the weights via fill/grow_norm, validate the parameter count, run the two checks for functional fidelity and trainability, and finally write to disk. E01-E04 all occur in this function; after the fix the new rows are random, the new columns are zeroed, the intermediate-layer gates are 1 and the final_norm gate is 0, and a new check has been added that runs 5 backward steps and inspects the gradient of every parameter.",
+  "refs": [
+   "E01",
+   "E02",
+   "E03",
+   "E04"
+  ]
+ },
+ "retnet_hf/fused_ce.py::_fused_forward": {
+  "text": "Forward pass of the fused cross-entropy: it computes the logits in chunks of LOGIT_CHUNK and stores only the logsumexp of each row and the logit of the target token, never the full [N,V] matrix. Peak GPU memory therefore drops from N x V x 4 bytes to N x 4. The function is marked with torch._dynamo.disable because the dynamic slicing over chunks would break the Dynamo graph and fall back to eager.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/modeling_retnet.py::RetNetBlock._block_forward": {
+  "text": "The actual computation of a block: apply norm1 to x and feed the result into retention, then add the residual to obtain y; apply norm2 to y and feed it into the FFN, then add the residual and dropout. This is the standard pre-LN residual structure. Both residuals are added directly, with no scaling factor, so any operation that injects nonzero new dimensions into a residual immediately changes the output, which is why width growth has to preserve the function through gating or zeroing.",
+  "refs": []
+ },
+ "retnet_hf/modeling_retnet.py::rotate_every_two": {
+  "text": "Rotates the two adjacent components (x0, x1) of the last dimension into (-x1, x0), the real-valued equivalent of the complex multiplication e^{i theta} * (a+bi). RetNet uses rotary position encoding to inject absolute position information into q and k, and the rotation angle is determined jointly by the position and the frequency table. This function performs only a shape transformation and introduces no learnable parameters, so it never shows up in the optimizer state.",
+  "refs": []
+ },
+ "retnet_hf/train.py::decay_group_1d_violations": {
+  "text": "Inspects the optimizer parameter groups: it returns the names of all 1-D parameters that appear in a group with weight_decay>0 (E06). This is a more direct criterion than asking whether gamma shrank during training, because gamma legitimately changes as training proceeds, whereas 'a 1-D parameter must not appear in a decay group' is a structural hard constraint. Parameters are matched by id(), without relying on a re-implementation of the parameter naming rules.",
+  "refs": [
+   "E06"
+  ]
+ },
+ "retnet_hf/fused_ce.py::FusedLinearCrossEntropy.backward": {
+  "text": "Backward pass of the custom autograd function: it calls _fused_backward to compute the gradients with respect to the hidden states and the weight, and returns them in the order of the inputs. target and w are tensors that do not require gradients, so None is returned for them. The correctness of this step depends entirely on the wsum and the weight codes saved in forward; any change of semantics must be made on both sides at once.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/fused_ce.py::FusedLinearCrossEntropy.forward": {
+  "text": "Forward pass of the custom autograd function: it calls _fused_forward to obtain the lse and the target logit, computes the weighted average according to the weight codes to obtain the loss, and stores the tensors needed for backward in ctx. It returns only the scalar loss and no logits, so the caller can no longer use the logits for any other computation.",
+  "refs": [
+   "E22"
+  ]
+ },
+ "retnet_hf/data.py::_FlatStage.shard_count": {
+  "text": "Returns the number of shards scanned so far; this is the input to the min_shards guard in the plan callback that decides whether the stage is ready. In an earlier round min_shards was set to 10 while only 1 shard was actually produced, so the stage never became ready and training stalled in the previous stage, retrying every 200 steps. This property is exactly the input to that guard.",
+  "refs": [
+   "E13"
+  ]
+ },
+ "retnet_hf/data.py::_FlatStage.files": {
+  "text": "Returns the paths of every shard owned by this stage, for GC deletion. In flat mode these shards are the only copy of the training data, so deleting them is irreversible; the rebuildability proof lives in gc_stage (meta.json must exist and provide rebuild_cmd / source_ids / the legacy sources+text_fields). This function only lists files: it makes no safety decision and cannot check whether the source data still exists.",
+  "refs": [
+   "E13"
+  ]
+ },
+ "retnet_hf/train.py::classify_dead_grad_params": {
+  "text": "Classifies 'never received a gradient' and 'gradient identically zero' into the same category of dead parameter: if the key is absent from seen_max, or the recorded maximum absolute value is 0, the parameter is judged dead. The return order matches the order of the parameter names passed in, so the log shows embedding and the first few layers first, which makes localization easier. It is a pure function, and the tests feed it dictionaries directly.",
+  "refs": [
+   "E07"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.refresh_stage": {
+  "text": "Rescans the directory of stage i and picks up newly arrived shards; it returns False if nothing changed. It only takes effect for stages that implement refresh (flat); packed stages are fixed. As with E19, refresh itself compares only the count, so a same-size replacement is not detected.",
+  "refs": [
+   "E19"
+  ]
+ },
+ "retnet_hf/data.py::StagePackedDataset.set_stage": {
+  "text": "Switches the active stage. It first calls _stage to open the target stage ahead of time, so that a failure is raised right there, and then updates the active index. Opening early is essential: if the stage were opened only at the first data fetch, the failure would happen deep inside the training loop and leave only an uninformative IndexError on the spot.",
+  "refs": [
+   "E12"
+  ]
+ }
+}
