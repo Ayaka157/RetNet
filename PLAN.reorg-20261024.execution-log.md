@@ -123,3 +123,37 @@ undo variant was separately rehearsed in a throwaway clone.
 | Content changed in place | 1 (`.gitignore`, from T1.5) |
 | Per-move hash verification | T2.1 366/366 · T2.2 437/437 · T2.3 16/16 · T2.8 33/33 · T2.9 18/18 |
 | Prefix proof | 16/16 adjacent pairs |
+
+## Acceptance criteria — measured outcome
+
+| # | Criterion | Result |
+| --- | --- | --- |
+| 1 | Baseline manifest exists; post differs only on approved IDs | **PASS** — 899 removals, 893 byte-preserved, 6 ACL-blind, **0 unexplained** |
+| 2 | `git status --porcelain` clean or only intended renames | **PASS** — clean |
+| 3 | Every Tier 2 item has an undo script; pattern rehearsed | **PASS** — 8 scripts (`T2_1,2,3,4,5,6,8,9`), both move patterns rehearsed |
+| 4 | `archive/INDEX.md` ledgers every relocation | **PASS** — origin, destination, date, reason, duplication, undo |
+| 5 | `data_cache/` and `checkpoints/` only changed per T2.9 | **PASS** — `checkpoints` 29 files / 14,405.7 MB identical; `data_cache` 26→23 dirs, the 3 all verified in `archive/data/` |
+| 6 | README and RUNBOOK link checks return zero missing | **PARTIAL** — README 0 missing; RUNBOOK 4 |
+| 7 | No source file remains under `logs/` | **FAIL** — 28 `.py` files remain |
+
+### AC6 detail — why RUNBOOK still has 4
+
+- `checkpoints/retnet_272m_rp/` and `checkpoints/retnet_272m_v10/` — the 272M weights were
+  deleted from disk (recorded in commit `f66bd5c`, "Record what is on HF and what was
+  deleted locally"). They are **not recoverable from git**, so no restore is possible.
+- `docs/02` and `docs/04` — bare prefix references that were unambiguous before the T2.6
+  restore and are ambiguous now, because `docs/` contains two files numbered `02` and two
+  numbered `04` (see A7). This is a direct consequence of restoring to original paths.
+
+### AC7 detail — `logs/` still holds source
+
+T2.1 only relocated `logs/_3090_recover/`. A wider check after the fact found **28 loose
+scripts** at the `logs/` root (`_hf_login_from_file.py`, `_scrub_scan.py`, `_shot_ui.py`,
+`_try_prompts.py`, …) plus `logs/_space/fetch_model.py`, `logs/linux/_fetch_corpora.py`
+and `logs/autodl_20261012/scripts/linux/env_check.py`. They are gitignored scratch
+helpers, they were outside T2.1's stated scope, and relocating them is a **new action
+that was never approved**, so they were left in place. Proposed follow-up: **T2.1b**,
+same pattern as T2.1, pending approval.
+
+Note: `logs/_hf_login_from_file.py` is the script that reads `HF Access Token.txt`, which
+is why Tier 4 forbids moving that token file.
