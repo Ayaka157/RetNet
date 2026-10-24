@@ -142,6 +142,22 @@ tracked trees, so the reversal is recorded as a rename rather than a delete.
 
 ---
 
+### T2.1b — scratch scripts cleared out of `logs/`
+
+| | |
+| --- | --- |
+| From | `logs/` — 28 `.py` files, including three in subdirectories |
+| To | **13 promoted** into `scripts/`; **15 archived** into `archive/logs_scratch/` |
+| Date | 2026-10-24 |
+| Reason | `.gitignore` defines `logs/` as run products, yet 28 helper scripts lived there. T2.1 cleared `logs/_3090_recover`; this clears the rest. |
+| Only copy | **25 of the 28** exist nowhere else — this was not a duplicate pile |
+| Promoted (now tracked) | `_cpu_footprint`, `_cpu_threads`, `_cpu_timing`, `_scrub_context`, `_scrub_scan`, `_verify_pdf`, `_pagecheck`, `_crosscheck2`, `_crossdiff`, `_hf_login_from_file`, `_hf_stage`, `_hf_upload`, `_fetch_corpora` |
+| Archived (untracked) | 5 screenshot/demo scripts, 2 plan-pipeline tests, 4 bench utilities, `fetch_model.py`, the redundant `env_check.py`, and **2 scrubbers deliberately kept out of git** |
+| **Security finding** | `_scrub_apply.py` and `_pdf_scrub_check.py` embed a **real internal network address** — exactly the class of identifier they exist to strip before publishing. They must never be tracked, so they sit under an ignored path. Their content is unchanged; only their location is. |
+| Reference repair | `scripts/linux/_supervise_fetch.sh:16` already called `scripts/_fetch_corpora.py`, a path that did not exist. Promoting that file made the call resolve. |
+| Verified | `logs/` contains **0** `.py` files; no staged blob contains the address or a token literal |
+| Undo | `archive/_undo/T2_1b.undo.ps1` |
+
 ## Not relocations (recorded for completeness)
 
 - **T2.5** `docs/_report_0p5b/` — was gitignored, now committed. No path change.
@@ -153,5 +169,4 @@ tracked trees, so the reversal is recorded as a rename rather than a delete.
 
 ## Open, deliberately not done
 
-- **T2.1b — HELD at the owner's request.** 28 `.py` files remain under `logs/`. Only 3 are redundant; **25 are the only copy on disk**, and several are operational tooling (release scrubbers, HF upload helpers, PDF bounds checkers, CPU sizing probes). A wholesale move into `archive/` would bury live tools to satisfy an acceptance criterion this plan invented, so nothing was moved. Awaiting a decision between: retire the criterion, promote the reusable tools into `scripts/`, or archive them wholesale.
 - **Tier 3** (`pretrain_merged` int64→int16, `chat_pack_v3..v10`, `chat_recovery_mix`) and **Tier 4** (forbidden) were never in scope for this execution.

@@ -204,3 +204,51 @@ represent current features and not real-time status.
 
 In-place content changes across the whole execution: `.gitignore`, `README.md`,
 `README.zh-CN.md`, `RUNBOOK.md`. Everything else that changed location is byte-identical.
+
+---
+
+# Round 3 — T2.1b executed as *changed* option 2
+
+The owner answered AC7 with "Do as your suggestion", then clarified: "i mean change it
+(the option 2)" — i.e. selective promotion, adapted for the safety problem found during
+pre-flight.
+
+### The finding that changed the split
+Before promoting anything into a **tracked** directory, all 28 candidates were scanned for
+secret-shaped content. Two hit:
+
+- `_scrub_apply.py` — contains a real internal network address (one occurrence)
+- `_pdf_scrub_check.py` — contains the same address (one occurrence)
+
+These are the very scripts written to strip that class of identifier before publishing, so
+promoting them would have committed exactly what the project's own `.gitignore` preamble
+forbids ("credentials and private information never enter the repository"). The split was
+therefore changed from the original suggestion.
+
+### What was done
+- **13 promoted into `scripts/`** and are now tracked: `_cpu_footprint`, `_cpu_threads`,
+  `_cpu_timing`, `_scrub_context`, `_scrub_scan`, `_verify_pdf`, `_pagecheck`,
+  `_crosscheck2`, `_crossdiff`, `_hf_login_from_file`, `_hf_stage`, `_hf_upload`,
+  `_fetch_corpora`.
+- **15 archived into `archive/logs_scratch/`**, which is gitignored: the 5 screenshot/demo
+  scripts, 2 plan-pipeline tests, 4 bench utilities, `fetch_model.py`, the redundant
+  `env_check.py`, and the 2 address-bearing scrubbers.
+- `/archive/logs_scratch/` added to `.gitignore` with a root-anchored rule.
+
+### Two deviations worth recording
+1. **The suggested split was amended for one file.** `_fetch_corpora.py` was originally in
+   my "instance helpers -> archive" group, but `scripts/linux/_supervise_fetch.sh:16`
+   already calls `scripts/_fetch_corpora.py` — a path that did not exist. Promoting it
+   repaired a pre-existing broken reference instead of creating a new one, so it moved to
+   the promote side.
+2. **I created and then caught a leak of my own.** The first version of the `.gitignore`
+   comment explained the exclusion by writing the address out literally — which would have
+   committed it. The staged-blob secret sweep caught it before commit; the comment now
+   describes the address without reproducing it.
+
+### Result
+`logs/` contains **0** `.py` files. No staged blob contains the address or a token literal.
+
+| # | Criterion | Status |
+| --- | --- | --- |
+| 7 | no source file remains under `logs/` | **PASS** (previously FAIL) |
