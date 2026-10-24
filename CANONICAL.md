@@ -66,7 +66,26 @@ no de-duplication opportunity.
 | `checkpoints/retnet_500m/`, `probe_500m/` | earlier 500M runs, distinct |
 
 Published weights live on Hugging Face, not in this repository:
-`Ayaka157/RetNet-0.5B` (final), `-ep1`, `-ep2`, and `Ayaka157/RetNet-100M`.
+
+| Repository | Contents | Status |
+| --- | --- | --- |
+| `Ayaka157/RetNet-0.5B` | epoch 3, `v15b_ep3` | usable |
+| `Ayaka157/RetNet-0.5B-ep2` | `v15b_ep2` | usable |
+| `Ayaka157/RetNet-0.5B-ep1` | `v15b` | usable |
+| `Ayaka157/RetNet-100M` | 401 MB, no local copy | usable |
+| `Ayaka157/RetNet-0.5B-ep1-ckpt67390` | `v15b/checkpoint-67390` + `trainer_state.json` | usable; the resume point for epoch 2 |
+| `Ayaka157/RetNet-FAILED-checkpoints` | `01_v21_export` only | **failed — do not use** |
+
+**Publication policy (2026-10-24):** only checkpoints produced by training are published.
+Two artifacts are deliberately excluded and stay local-only:
+
+- `checkpoints/probe_500m/` — random weights; its own config `_note` says it is for
+  VRAM/step-time measurement and "not usable for evaluation".
+- `checkpoints/retnet_500m/` — the width-growth *product*, not a training output; it has no
+  `trainer_state.json`. This is where the 338,120,704 dead parameters were created.
+
+Failed *trained* models go to `RetNet-FAILED-checkpoints` with an explicit do-not-use banner,
+never into a normal model repository.
 
 ## 3. Entry points
 
