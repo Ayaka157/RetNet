@@ -93,7 +93,7 @@ Recorded in `RUNBOOK.md` §5 and the technical report. Each one cost real time.
 
 `main` at the time of writing carries the reorganization commits. The one
 recoverable pre-purge marker is the tag `archive/pre-purge-20261019`.
-`MANIFEST.baseline.sha256` is the pre-move hash baseline for every path outside
+`archive/MANIFEST.baseline.sha256` is the pre-move hash baseline for every path outside
 `.git/`, `data_cache/`, `checkpoints/` and `hf_cache/`.
 
 Three directories under `Kaggle/_audit/checks/` (`tmpa3758029`, `tmpadjufmpf`,
@@ -101,7 +101,7 @@ Three directories under `Kaggle/_audit/checks/` (`tmpa3758029`, `tmpadjufmpf`,
 disabled, so the normal baseline pass could not enumerate them. They were read once
 under an elevated (UAC) read-only pass on 2026-10-24: they hold **six leftover test
 fixtures** from the checkpoint-resume harness, nothing else. Their hashes are
-appended to `MANIFEST.baseline.sha256` under a provenance comment. No `takeown` and
+appended to `archive/MANIFEST.baseline.sha256` under a provenance comment. No `takeown` and
 no `icacls` change was made, so the directories remain as they were.
 
 ## 6. Still UNSURE

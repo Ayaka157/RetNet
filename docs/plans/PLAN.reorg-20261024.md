@@ -4,7 +4,7 @@
 - **Written:** 2026-10-24 (Asia/Shanghai)
 - **Repository HEAD at authoring:** `52c27cd` on `main`
 - **Status:** approved for execution — Tier 1 and Tier 2 only
-- **Execution log:** `PLAN.reorg-20261024.execution-log.md`
+- **Execution log:** `docs/plans/PLAN.reorg-20261024.execution-log.md`
 
 This plan is the output of a read-only archaeological survey of the workspace.
 No file was moved, renamed or deleted while it was being written. The survey
@@ -81,13 +81,13 @@ RetNet/
   checkpoints/ hf_cache/     untouched
   logs/                      run products only, no source
   CANONICAL.md               NEW: the authoritative map
-  MANIFEST.baseline.sha256   NEW: pre-move baseline
+  archive/MANIFEST.baseline.sha256   NEW: pre-move baseline
 ```
 
 ## 4. Tier 1 — act now
 
 ### T1.1 Baseline manifest
-Create `MANIFEST.baseline.sha256` at the repo root: SHA-256 + relative path for
+Create `archive/MANIFEST.baseline.sha256` at the repo root: SHA-256 + relative path for
 every file outside `.git/`, `data_cache/`, `checkpoints/`, `hf_cache/`.
 Precondition for reversibility. Mirrors the existing `20261020_Submit/MANIFEST.sha256`
 convention. **Undo:** delete the file.
@@ -258,7 +258,7 @@ Two traps this design exists to prevent:
 
 ## 11. Acceptance criteria
 
-1. `MANIFEST.baseline.sha256` exists; a post-execution manifest differs only on the
+1. `archive/MANIFEST.baseline.sha256` exists; a post-execution manifest differs only on the
    approved IDs.
 2. `git status --porcelain` is clean, or shows only intended rename entries.
 3. Every Tier 2 item has a paired undo script; the undo pattern has been rehearsed

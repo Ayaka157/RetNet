@@ -30,7 +30,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data_cache")
 
-# Classification per PLAN.reorg-20261024.md section 6.
+# Classification per docs/plans/PLAN.reorg-20261024.md section 6.
 CLASS = {
     "pretrain_v2": "CURRENT",
     "chat_pack_v13": "CURRENT",
@@ -131,7 +131,7 @@ def main():
     consumers = live_consumer_map(names)
     out = {
         "generated_by": "scripts/build_data_index.py",
-        "generated_for": "PLAN.reorg-20261024.md (T2.9 precondition)",
+        "generated_for": "docs/plans/PLAN.reorg-20261024.md (T2.9 precondition)",
         "note": "Per-file SHA-256 is recorded only for DERIVABLE packs, i.e. the "
                 "files whose bytes change location. Everything else is unchanged.",
         "datasets": {},
@@ -199,7 +199,7 @@ def write_markdown(out):
         "",
         "由 `scripts/build_data_index.py` 生成，**不要手工编辑**。",
         "",
-        "这是 `PLAN.reorg-20261024.md` 第 6 节的机器可读版本：路径不变，只是把",
+        "这是 `docs/plans/PLAN.reorg-20261024.md` 第 6 节的机器可读版本：路径不变，只是把",
         "「哪一包是什么、谁在用、能不能重算」从散文变成可查询的记录。",
         "",
         "类别含义：`ROOT` 原始语料，此处不可再生成；`CURRENT` 当前在用；",

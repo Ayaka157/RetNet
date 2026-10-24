@@ -4,8 +4,8 @@ Every path below was **moved, never deleted**. Each row names the origin, the
 destination, the date, why it moved, how much of it was already duplicated
 elsewhere, and the script that puts it back.
 
-Plan: `PLAN.reorg-20261024.md`. Execution log: `PLAN.reorg-20261024.execution-log.md`.
-Baseline hash manifest: `MANIFEST.baseline.sha256` (taken before any move).
+Plan: `docs/plans/PLAN.reorg-20261024.md`. Execution log: `docs/plans/PLAN.reorg-20261024.execution-log.md`.
+Baseline hash manifest: `archive/MANIFEST.baseline.sha256` (taken before any move).
 
 **Undo convention.** Every script lives in `archive/_undo/` and takes no arguments.
 Each refuses to run if its destination already exists, and verifies SHA-256 after
@@ -157,6 +157,20 @@ tracked trees, so the reversal is recorded as a rename rather than a delete.
 | Reference repair | `scripts/linux/_supervise_fetch.sh:16` already called `scripts/_fetch_corpora.py`, a path that did not exist. Promoting that file made the call resolve. |
 | Verified | `logs/` contains **0** `.py` files; no staged blob contains the address or a token literal |
 | Undo | `archive/_undo/T2_1b.undo.ps1` |
+
+### ROOT_1 — root tidied from 42 items to 35
+
+| | |
+| --- | --- |
+| Date | 2026-10-24 |
+| Reason | 20 loose files at the repository root, of which 7 had a better home. The other 21 root items are directories and were deliberately left in place. |
+| Moved (tracked) | `PLAN.reorg-20261024.md` and its execution log -> `docs/plans/`; `MANIFEST.baseline.sha256` -> `archive/`; `_probe.py` -> `scripts/_probe_bench_cats.py` |
+| Moved (ignored) | `logs_bundle.tgz` -> `archive/`; `101126-13906-01.dmp` -> `archive/crash/`; `2609.19969.pdf` -> `docs/paper/` |
+| Ignore safety | all three binaries are matched by **bare-filename** rules (`logs_bundle.tgz`, `2609.19969.pdf`) or a global pattern (`*.dmp`), so they stay ignored at the new paths. Verified with `git check-ignore` after the move: none became trackable. |
+| References updated | `archive/INDEX.md`, `CANONICAL.md`, `scripts/build_data_index.py`, `docs/archive/restored-2026-10-24/README.md`, and both moved plan files — rewritten with a lookbehind guard so no path could be double-prefixed |
+| Deliberately not moved | the 6 Python package directories and the 4 data directories (import paths and 26 task configs), `tasks/`, the 4 entry points, the 5 top-level docs, `HF Access Token.txt`, and every directory named in README's repository map |
+| Verified | 7/7 hashes identical at destination; README and RUNBOOK link checks still 0 missing |
+| Undo | `archive/_undo/ROOT_1.undo.ps1` |
 
 ## Not relocations (recorded for completeness)
 

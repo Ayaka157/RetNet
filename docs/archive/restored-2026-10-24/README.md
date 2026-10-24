@@ -9,7 +9,7 @@ These 21 files were recovered from git history on 2026-10-24 and then moved here
 | `e11ece8^` | 3 notes: `02_训练管线`, `24_AutoDL上机手册`, `26_RetNet-0.5B_技术报告` |
 
 Each file is stored separately under its original name, and all 21 are byte-identical to
-the version they were restored from. Their hashes are in `MANIFEST.baseline.sha256` and in
+the version they were restored from. Their hashes are in `archive/MANIFEST.baseline.sha256` and in
 `archive/_undo/POST.sha256`.
 
 ## These are historical documents, not current guidance

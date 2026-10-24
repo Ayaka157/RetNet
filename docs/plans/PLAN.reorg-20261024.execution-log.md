@@ -1,6 +1,6 @@
 # Execution log — plan reorg-20261024
 
-Companion to `PLAN.reorg-20261024.md`. This file records **every deviation** from
+Companion to `docs/plans/PLAN.reorg-20261024.md`. This file records **every deviation** from
 the approved plan, so "followed the plan exactly" is auditable rather than asserted.
 
 Executed 2026-10-24 (Asia/Shanghai). Starting HEAD `52c27cd`. All work is committed;
@@ -84,7 +84,7 @@ prompt the user accepted:
 2. hash those 6 files.
 
 **No `takeown`, no `icacls` change, no file created or deleted in those directories.**
-The 6 hashes are appended to `MANIFEST.baseline.sha256` under a provenance comment.
+The 6 hashes are appended to `archive/MANIFEST.baseline.sha256` under a provenance comment.
 
 ### A7 — "restore" interpreted as restore-to-original-paths, and one side effect surfaced
 D1 was answered "Restore, then turn to archive". Executed the restore half literally:
